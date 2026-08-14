@@ -46,12 +46,24 @@ export default function AdminConfiguracionPage() {
   const [admins, setAdmins]         = useState<AdminItem[]>([])
   const [newName, setNewName]       = useState('')
   const [newRole, setNewRole]       = useState('Administrador')
-  const [newPass, setNewPass]       = useState(() => generatePassword())
+  // Vacío en el primer render (SSR y cliente deben coincidir); se genera en
+  // el useEffect de abajo, que solo corre en el cliente — generatePassword()
+  // usa crypto.getRandomValues(), que da un valor distinto en cada corrida,
+  // así que generarla durante el render causaba un mismatch de hidratación.
+  const [newPass, setNewPass]       = useState('')
   const [passCopied, setPassCopied] = useState(false)
   const [profileError, setProfileError] = useState('')
   const [creating, setCreating]     = useState(false)
 
   const me = currentAdminName()
+
+  useEffect(() => {
+    // Intencional: generatePassword() debe correr solo en el cliente (ver
+    // comentario junto a useState(newPass) arriba) — no hay forma de calcular
+    // esto durante el render sin reintroducir el mismatch de hidratación.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNewPass(generatePassword())
+  }, [])
 
   useEffect(() => {
     const keys = [
@@ -402,7 +414,7 @@ export default function AdminConfiguracionPage() {
                 </p>
               </div>
 
-              <button onClick={createProfile} disabled={creating || !newName.trim()}
+              <button onClick={createProfile} disabled={creating || !newName.trim() || !newPass}
                 className="w-full py-3 rounded-2xl text-sm font-bold transition-all disabled:opacity-50"
                 style={{ backgroundColor: S.accent, color: '#000' }}>
                 {creating ? 'Creando...' : '+ Crear perfil'}
