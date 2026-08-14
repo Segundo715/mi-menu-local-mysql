@@ -1,6 +1,13 @@
 import mysql from 'mysql2/promise'
 
-const pool = mysql.createPool({
+// El hot-reload de Next.js en dev re-evalúa este módulo en cada recompilación;
+// sin cachear el pool en `global`, cada guardado de archivo crea 10 conexiones
+// nuevas sin cerrar las anteriores hasta agotar max_connections de MySQL.
+declare global {
+  var __mysqlPool: mysql.Pool | undefined
+}
+
+const pool = global.__mysqlPool ?? mysql.createPool({
   host: process.env.MYSQL_HOST,
   port: Number(process.env.MYSQL_PORT || 3306),
   user: process.env.MYSQL_USER,
@@ -12,6 +19,7 @@ const pool = mysql.createPool({
   // strings en vez de number, a diferencia de Postgres/supabase-js.
   decimalNumbers: true,
 })
+if (process.env.NODE_ENV !== 'production') global.__mysqlPool = pool
 
 export async function query<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
   const [rows] = await pool.query(sql, params)

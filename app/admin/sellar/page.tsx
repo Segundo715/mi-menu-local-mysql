@@ -165,6 +165,7 @@ export default function AdminSellarPage() {
   const [loyaltyActive, setLoyaltyActive] = useState<LoyaltyCardItem[]>([])
   const [activatingCard, setActivatingCard] = useState<string | null>(null)
   const [scannedLoyalty, setScannedLoyalty] = useState<LoyaltyCardItem[]>([])
+  const [stampingId, setStampingId] = useState<string | null>(null)
 
   async function loadLoyaltyPending() {
     try {
@@ -211,7 +212,7 @@ export default function AdminSellarPage() {
   }
 
   async function stampLoyaltyCard(id: string) {
-    setScanState('stamping')
+    setScanState('stamping'); setStampingId(id)
     const res = await fetch(`/api/loyalty/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'stamp' }),
@@ -224,10 +225,11 @@ export default function AdminSellarPage() {
     } else {
       setScanState('found'); setScanError('Error al registrar la visita.')
     }
+    setStampingId(null)
   }
 
   async function redeemLoyaltyCard(id: string) {
-    setScanState('stamping')
+    setScanState('stamping'); setStampingId(id)
     const res = await fetch(`/api/loyalty/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'redeem' }),
@@ -240,6 +242,7 @@ export default function AdminSellarPage() {
     } else {
       setScanState('found')
     }
+    setStampingId(null)
   }
 
   async function deleteLoyaltyCard(id: string) {
@@ -549,6 +552,7 @@ export default function AdminSellarPage() {
                   style={{ backgroundColor: S.accent }}>{loyaltyActive.length}</span>
                 <h2 className="font-bold" style={{ color: S.text }}>Tarjetas activas</h2>
               </div>
+
               {loyaltyActive.map(c => (
                 <div key={c.id} className="rounded-2xl p-4"
                   style={{ backgroundColor: S.card, border: `1px solid ${S.border}` }}>
@@ -563,11 +567,30 @@ export default function AdminSellarPage() {
                       {c.visits}/5 sellos
                     </span>
                   </div>
-                  <button onClick={() => deleteLoyaltyCard(c.id)}
-                    className="w-full rounded-xl py-1.5 text-sm font-medium inline-flex items-center justify-center gap-1.5"
-                    style={{ color: '#f87171', border: '1px solid rgba(239,68,68,.3)' }}>
-                    <Icon name="trash" size={14} /> Eliminar tarjeta
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    {c.visits >= 5 ? (
+                      <button onClick={() => redeemLoyaltyCard(c.id)} disabled={stampingId === c.id}
+                        className="w-full font-bold py-2.5 rounded-xl text-sm disabled:opacity-60"
+                        style={{ backgroundColor: '#f59e0b', color: '#000' }}>
+                        <span className="inline-flex items-center justify-center gap-1.5">
+                          <Icon name="gift" size={14} /> {stampingId === c.id ? 'Canjeando...' : 'Canjear premio'}
+                        </span>
+                      </button>
+                    ) : (
+                      <button onClick={() => stampLoyaltyCard(c.id)} disabled={stampingId === c.id}
+                        className="w-full font-bold py-2.5 rounded-xl text-sm disabled:opacity-60"
+                        style={{ backgroundColor: S.accent, color: accentText }}>
+                        <span className="inline-flex items-center justify-center gap-1.5">
+                          <Icon name="coffee" size={14} /> {stampingId === c.id ? 'Sellando...' : 'Sellar visita'}
+                        </span>
+                      </button>
+                    )}
+                    <button onClick={() => deleteLoyaltyCard(c.id)}
+                      className="w-full rounded-xl py-1.5 text-sm font-medium inline-flex items-center justify-center gap-1.5"
+                      style={{ color: '#f87171', border: '1px solid rgba(239,68,68,.3)' }}>
+                      <Icon name="trash" size={14} /> Eliminar tarjeta
+                    </button>
+                  </div>
                 </div>
               ))}
               <div className="h-px" style={{ backgroundColor: S.border }} />

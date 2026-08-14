@@ -18,6 +18,8 @@ const NAV_LINKS: NavLink[] = [
   { href: '/admin/menu',            icon: 'menu',             label: 'Menú Inteligente' },
   { href: '/admin/orders',          icon: 'operaciones',      label: 'Pedidos' },
   { href: '/admin/reviews',         icon: 'reviews',          label: 'Reseñas', feature: 'reviews' },
+  { href: '/admin/tarjetas',        icon: 'card',             label: 'Tarjetas', feature: 'loyaltyCard' },
+  { href: '/admin/sellar',          icon: 'scan',             label: 'Sellar', feature: 'loyaltyCard' },
   { href: '/admin/configuracion',   icon: 'settings',         label: 'Configuración' },
 ]
 

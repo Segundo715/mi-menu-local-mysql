@@ -79,6 +79,7 @@ export default function AdminTarjetasPage() {
   const [cards, setCards] = useState<LoyaltyCard[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'todas' | 'activas' | 'inactivas' | 'vencidas'>('todas')
+  const [categoryFilter, setCategoryFilter] = useState('todas')
   const [inactiveDays, setInactiveDays] = useState(30)
 
   // Categorías de Rewards (tipos de tarjeta) — módulos en pestañas
@@ -227,6 +228,7 @@ export default function AdminTarjetasPage() {
   }
 
   const filtered = cards.filter(c => {
+    if (categoryFilter !== 'todas' && (c.cardType ?? 'cafe') !== categoryFilter) return false
     const days = daysLeft(c.expiresAt)
     if (filter === 'activas') return c.active
     if (filter === 'inactivas') return !c.active
@@ -679,6 +681,31 @@ export default function AdminTarjetasPage() {
             Desactivar inactivas
           </button>
         </div>
+
+        {/* Filtrar por categoría */}
+        {categories.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold mb-1.5" style={{ color: S.sub }}>Filtrar por categoría</p>
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={() => setCategoryFilter('todas')}
+                className="px-3 py-2 rounded-xl text-xs font-bold transition-all"
+                style={categoryFilter === 'todas'
+                  ? { backgroundColor: S.accent, color: '#000' }
+                  : { backgroundColor: S.card, color: S.sub, border: `1px solid ${S.border}` }}>
+                Todas las categorías
+              </button>
+              {categories.map(cat => (
+                <button key={cat.id} onClick={() => setCategoryFilter(cat.id)}
+                  className="px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                  style={categoryFilter === cat.id
+                    ? { backgroundColor: cat.color, color: '#000' }
+                    : { backgroundColor: S.card, color: S.sub, border: `1px solid ${S.border}` }}>
+                  <RewardIcon name={cat.icon} size={13} /> {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Filtros */}
         <div className="flex gap-2 flex-wrap">
