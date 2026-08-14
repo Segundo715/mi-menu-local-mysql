@@ -18,11 +18,9 @@ const TEXT_SETTINGS = [
   { key: 'registro_subtitulo', label: 'Subtítulo de bienvenida', placeholder: 'Completa tus datos para registrarte...', hint: 'Texto debajo del título en /registro' },
 ]
 
-interface AdminItem    { id: string; name: string; role: string; createdAt: string }
-interface EmployeeItem { id: string; name: string; role: string; createdAt: string }
+interface AdminItem { id: string; name: string; role: string; createdAt: string }
 
-const ROLES     = ['Administrador', 'Gerente', 'Supervisor', 'Encargado', 'Cajero', 'Auditor']
-const EMP_ROLES = ['Mesero', 'Capitán', 'Hostess', 'Bartender', 'Barista', 'Cocina', 'Cajero', 'Repartidor']
+const ROLES = ['Administrador', 'Gerente', 'Supervisor', 'Encargado', 'Cajero', 'Auditor']
 
 function generatePassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$'
@@ -53,21 +51,6 @@ export default function AdminConfiguracionPage() {
   const [profileError, setProfileError] = useState('')
   const [creating, setCreating]     = useState(false)
 
-  const [employees, setEmployees]     = useState<EmployeeItem[]>([])
-  const [empName, setEmpName]         = useState('')
-  const [empRole, setEmpRole]         = useState('Mesero')
-  const [empPass, setEmpPass]         = useState(() => generatePassword())
-  const [empPassCopied, setEmpPassCopied] = useState(false)
-  const [empError, setEmpError]       = useState('')
-  const [creatingEmp, setCreatingEmp] = useState(false)
-
-  const [r3Users, setR3Users]         = useState<AdminItem[]>([])
-  const [r3Name, setR3Name]           = useState('')
-  const [r3Pass, setR3Pass]           = useState(() => generatePassword())
-  const [r3PassCopied, setR3PassCopied] = useState(false)
-  const [r3Error, setR3Error]         = useState('')
-  const [creatingR3, setCreatingR3]   = useState(false)
-
   const me = currentAdminName()
 
   useEffect(() => {
@@ -83,97 +66,12 @@ export default function AdminConfiguracionPage() {
     })
 
     loadAdmins()
-    loadEmployees()
-    loadR3Users()
   }, [])
 
   async function loadAdmins() {
     const r = await fetch('/api/admins')
     if (!r.ok) return
     setAdmins(await r.json())
-  }
-
-  async function loadEmployees() {
-    const r = await fetch('/api/employees')
-    if (!r.ok) return
-    setEmployees(await r.json())
-  }
-
-  async function loadR3Users() {
-    const r = await fetch('/api/resta3/users')
-    if (!r.ok) return
-    setR3Users(await r.json())
-  }
-
-  async function createR3User() {
-    setR3Error('')
-    if (!r3Name.trim()) { setR3Error('El nombre es requerido'); return }
-    setCreatingR3(true)
-    try {
-      const r = await fetch('/api/resta3/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: r3Name.trim(), password: r3Pass }),
-      })
-      const d = await r.json()
-      if (!r.ok) { setR3Error(d.error ?? 'Error al crear usuario'); return }
-      setR3Name('')
-      setR3Pass(generatePassword())
-      setR3PassCopied(false)
-      await loadR3Users()
-    } finally {
-      setCreatingR3(false)
-    }
-  }
-
-  async function deleteR3User(id: string, name: string) {
-    if (!confirm(`¿Eliminar al usuario "${name}"? Esta acción no se puede deshacer.`)) return
-    setR3Error('')
-    const r = await fetch(`/api/resta3/users?id=${id}`, { method: 'DELETE' })
-    if (!r.ok) { const d = await r.json(); setR3Error(d.error ?? 'No se pudo eliminar'); return }
-    await loadR3Users()
-  }
-
-  async function copyR3Password() {
-    await navigator.clipboard.writeText(r3Pass)
-    setR3PassCopied(true)
-    setTimeout(() => setR3PassCopied(false), 2500)
-  }
-
-  async function createEmp() {
-    setEmpError('')
-    if (!empName.trim()) { setEmpError('El nombre es requerido'); return }
-    setCreatingEmp(true)
-    try {
-      const r = await fetch('/api/employees', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: empName.trim(), password: empPass, role: empRole }),
-      })
-      const d = await r.json()
-      if (!r.ok) { setEmpError(d.error ?? 'Error al crear empleado'); return }
-      setEmpName('')
-      setEmpRole('Mesero')
-      setEmpPass(generatePassword())
-      setEmpPassCopied(false)
-      await loadEmployees()
-    } finally {
-      setCreatingEmp(false)
-    }
-  }
-
-  async function deleteEmp(id: string, name: string) {
-    if (!confirm(`¿Eliminar al empleado "${name}"? Esta acción no se puede deshacer.`)) return
-    setEmpError('')
-    const r = await fetch(`/api/employees?id=${id}`, { method: 'DELETE' })
-    if (!r.ok) { const d = await r.json(); setEmpError(d.error ?? 'No se pudo eliminar'); return }
-    await loadEmployees()
-  }
-
-  async function copyEmpPassword() {
-    await navigator.clipboard.writeText(empPass)
-    setEmpPassCopied(true)
-    setTimeout(() => setEmpPassCopied(false), 2500)
   }
 
   async function saveSetting(key: string, valueOverride?: string) {
@@ -371,7 +269,7 @@ export default function AdminConfiguracionPage() {
               <label className="block text-xs font-bold uppercase tracking-wide mb-1" style={{ color: S.sub }}>Color de acción (carrito / agregar)</label>
               {renderColorRow('menu_action_color', values.menu_action_color || values.menu_hover_color || '#DC5E86')}
               <p className="text-xs mt-1" style={{ color: S.sub }}>
-                Color del carrito flotante, "Agregar al Pedido" y los botones +/-. Si se deja vacío, usa el color de acento.
+                Color del carrito flotante, &quot;Agregar al Pedido&quot; y los botones +/-. Si se deja vacío, usa el color de acento.
               </p>
             </div>
 
