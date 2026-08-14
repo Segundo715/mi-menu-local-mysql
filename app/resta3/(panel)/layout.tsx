@@ -1,6 +1,7 @@
 // BrandProvider para que Resta3Nav pueda leer logo/nombre/acento del admin.
 // mi-menu: sin auth guard — Resta3 (igual que Empleado) queda abierto sin login,
 // solo Admin requiere sesión.
+import Script from 'next/script'
 import { getSetting } from '@/lib/settingsDb'
 import { getFeatureFlags } from '@/lib/features'
 import BrandProvider from '@/app/components/BrandProvider'
@@ -30,7 +31,7 @@ export default async function Resta3Layout({ children }: { children: React.React
 
   return (
     <>
-      <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      <Script id="resta3-theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       <style dangerouslySetInnerHTML={{ __html: `:root { --ad-accent: ${accentCss}; }` }} />
       <BrandProvider value={{
         name:      r3Name   || name,

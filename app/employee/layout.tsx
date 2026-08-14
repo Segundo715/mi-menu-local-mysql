@@ -1,5 +1,6 @@
 // Server component: misma estructura que admin/layout pero protege con employee_session cookie.
 // Lee settings en servidor para BrandProvider sin parpadeo.
+import Script from 'next/script'
 import { getSetting } from '@/lib/settingsDb'
 import { getFeatureFlags } from '@/lib/features'
 import BrandProvider from '@/app/components/BrandProvider'
@@ -34,7 +35,7 @@ export default async function EmployeeLayout({ children }: { children: React.Rea
 
   return (
     <>
-      <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      <Script id="employee-theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       <style dangerouslySetInnerHTML={{ __html: `:root { --ad-accent: ${scroll}; }` }} />
       <BrandProvider value={{ name, logo: finalLogo, logoColor: finalLogoColor, logoBg, accent: finalAccent, features }}>
         {/* FeatureGuard redirige al inicio si el empleado intenta acceder a un módulo desactivado */}

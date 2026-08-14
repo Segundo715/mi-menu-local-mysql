@@ -1,5 +1,6 @@
 // Server component: lee settings en el servidor para pasar nombre/logo/acento a BrandProvider
 // sin parpadeo. Inyecta el script de tema y el CSS del scrollbar con el color de sidebar_accent.
+import Script from 'next/script'
 import { getSetting } from '@/lib/settingsDb'
 import { getFeatureFlags } from '@/lib/features'
 import BrandProvider from '@/app/components/BrandProvider'
@@ -29,7 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <>
-      <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      <Script id="admin-theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       {/* Sobreescribe --ad-accent con el color guardado en settings para que el scrollbar de globals.css lo tome */}
       <style dangerouslySetInnerHTML={{ __html: `:root { --ad-accent: ${scroll}; }` }} />
       <BrandProvider value={{ name, logo, logoColor, logoBg, accent, features }}>

@@ -54,6 +54,10 @@ export default async function RootLayout({
       lang="es"
       translate="no"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // admin/employee/resta3 layouts setean data-admin-theme en este <html> vía script
+      // antes de hidratar, para evitar el flash de tema — eso difiere del render del
+      // servidor a propósito, así que se suprime la advertencia de hidratación aquí.
+      suppressHydrationWarning
     >
       <head>
         <meta name="google" content="notranslate" />
