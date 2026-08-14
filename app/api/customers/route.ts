@@ -1,8 +1,11 @@
-// GET es admin-only (lista todos los clientes). POST es público: crea cliente con confirmed:false.
+// GET es admin-only (lista todos los clientes, incluye passwordHash). POST es público: crea cliente con confirmed:false.
 import { NextRequest } from 'next/server'
 import { getAllCustomers, createCustomer } from '@/lib/db'
+import { verifySession } from '@/lib/auth'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!verifySession(req.cookies.get('admin_session')?.value))
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
   return Response.json(await getAllCustomers())
 }
 

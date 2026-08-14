@@ -1,311 +1,181 @@
-# Contexto — mi-proyecto (Nicho Restaurant Platform)
+# Contexto — mi-proyecto (mi-menu-local-mysql)
+
+Este documento refleja el estado **real y verificado** del código (auditado línea por
+línea el 2026-08-14). Si algo aquí no coincide con lo que ves en `app/`, `lib/` o la
+base de datos, confía en el código — este archivo puede quedarse desactualizado si
+no se mantiene junto con los cambios.
 
 ## ¿Qué es este proyecto?
 
-Plataforma SaaS multi-rol para restaurantes. El restaurante conectado actualmente es **Nicho Restaurant**. La misma base de código sirve a cuatro tipos de usuario, cada uno con su propia área protegida y flujo de autenticación.
+Un sitio de un solo restaurante con: menú digital para clientes, tarjeta de
+fidelización (sellos por visita), reseñas, y un panel de administración básico
+(menú, pedidos, reseñas, tarjetas de lealtad, sellado por QR/teléfono,
+configuración). **No** es una plataforma multi-tenant, no tiene chat de IA,
+recetario, señalización TV, reservaciones, ni analíticas avanzadas — todo eso
+existía en un proyecto hermano del que este repo se copió, y ya se eliminó del
+código.
 
-## Stack tecnológico
+## Stack técnico real
 
 | Capa | Tecnología |
-|------|-----------|
-| Framework | Next.js 16.2.6 — App Router |
-| UI | React 19.2.4 + TypeScript |
-| Estilos | Tailwind CSS 4 + custom CSS variables |
-| Base de datos | Supabase (PostgreSQL) con anon key + RLS |
-| Email | Nodemailer (solo para reseñas malas, rating ≤ 3) |
-| QR | html5-qrcode (leer), react-qr-code (generar) |
-| Animaciones | lottie-react |
-| Canvas | Konva / react-konva (editor de plano de planta) |
-| Auth en middleware | Web Crypto API — Edge Runtime (no Node.js) |
-| Auth en API routes | Node.js `crypto` module |
-| Deploy | Vercel — URL: `https://mi-proyecto-phi-ecru.vercel.app` |
+|---|---|
+| Framework | Next.js 16.2.6 — App Router, `next dev --webpack` |
+| UI | React 19.2.4 + TypeScript, Tailwind CSS 4 |
+| **Base de datos** | **MySQL** vía `mysql2/promise` (`lib/mysql.ts`) — todas las tablas |
+| **Storage de imágenes** | **Supabase Storage únicamente** (`lib/supabase.ts`) — Supabase no guarda ninguna tabla de datos de este proyecto |
+| Email | Nodemailer, solo para alertar reseñas con rating ≤ 3 |
+| QR | `html5-qrcode` (leer, en `/admin/sellar`), `react-qr-code` (generar) |
+| Auth | HMAC-SHA256 sin estado (`lib/auth.ts`), verificado en `proxy.ts` (Node.js runtime — en Next 16 el antiguo "middleware" se llama Proxy) |
+| Deploy | Vercel |
 
----
+El pool de MySQL (`lib/mysql.ts`) se cachea en `global` a propósito — sin eso, el
+hot-reload de `next dev` re-ejecuta el módulo en cada guardado y crea un pool nuevo
+de 10 conexiones sin cerrar el anterior, agotando `max_connections` del servidor.
 
-## Usuarios y roles
+## Autenticación — estado real
 
-| Rol | Ruta | Cookie de sesión | Descripción |
-|-----|------|-----------------|-------------|
-| Admin | `/admin/*` | `admin_session` | Dueño / gerente del restaurante |
-| Empleado | `/employee/*` | `employee_session` | Meseros, cajeros, cocina |
-| Resta3 | `/resta3/*` | `resta3_session` | Admin económico (TPV, mesas, cocina, inventario) |
-| Cliente / Usuario | `/card/*`, `/menu`, `/loyalty`, etc. | Sin cookie — stateless | Clientes del restaurante |
+Solo **Admin** tiene un flujo de login funcional. Empleado, Resta3 y Cliente no.
 
----
+| Rol | ¿Login real? | Detalle |
+|---|---|---|
+| **Admin** | ✅ Sí | `POST /api/auth` verifica contra `admins.password_hash` (`authenticateAdmin()` en `lib/adminDb.ts`), emite cookie HttpOnly `admin_session` (HMAC firmado con `ADMIN_SECRET`, `lib/auth.ts`). `proxy.ts` protege todo `/admin/*` excepto `/admin/login`. |
+| Empleado | ❌ No | `authenticateEmployee()` existe en `lib/employeeDb.ts` pero **ningún endpoint la llama** — no hay `/employee/login` ni `/api/employee/auth` (se borraron). `/employee/menu` es una página **pública**, sin gate de sesión. |
+| Resta3 | ❌ No | Igual que Empleado: cuentas `admins.role='Resta3'` se pueden crear desde `/admin/configuracion`, pero no existe `/resta3/login` ni `/api/resta3/auth`. `app/api/auth/route.ts` incluso **bloquea explícitamente** el login de admin normal si `role === 'Resta3'` (línea 37). `/resta3/menu` es pública, sin gate. |
+| Cliente | ❌ No | `authenticateCustomer()` existe en `lib/db.ts` pero tampoco la llama nadie. `POST /api/customers` (usado antes por un flujo de registro ya borrado) ni siquiera acepta contraseña. |
 
-## Autenticación
+**Esto es un estado conocido y decidido, no un bug pendiente.** `/employee/menu` y
+`/resta3/menu` se dejaron abiertas deliberadamente al reducir la app — ver
+`app/components/EmployeeNav.tsx` y `app/components/Resta3Nav.tsx`, que solo tienen un
+link ("Menú") cada uno.
 
-### Token de sesión (Admin y Empleado)
-- Formato: `<id>.<hmac_sha256(id, secret)>`
-- La firma se verifica en Edge Runtime (middleware) usando Web Crypto API
-- La misma lógica se reimplementa en Node.js (`lib/auth.ts`) para las API routes
+### Multi-restaurante (infraestructura presente, un solo restaurante desplegado)
 
-### Hash de contraseñas
-| Tipo | Salt compuesto |
-|------|---------------|
-| Admin | `${secret}:${name.toLowerCase()}:${password}` |
-| Empleado | `emp:${secret}:${name.toLowerCase()}:${password}` |
-| Cliente (no se usa, stateless) | `customer:${secret}:${phone}:${pin}` |
+Todos los `lib/*Db.ts` filtran por `restaurant_id` usando
+`const RID = process.env.NEXT_PUBLIC_RESTAURANT_ID || 'default'`. `settingsDb.ts`
+usa prefijo de clave en vez de columna (`scopedKey()`). En este despliegue
+`NEXT_PUBLIC_RESTAURANT_ID=menu-demo`, así que las claves de `settings` se guardan
+como `menu-demo:restaurant_name`, etc. El mecanismo soporta varios restaurantes en
+la misma base, pero solo hay uno configurado y en uso.
 
-### Cookie `admin_name`
-Es la única cookie que **no** es HttpOnly. Se usa para mostrar el nombre del admin en la UI sin hacer un fetch adicional.
+### Integración externa: SuperAdmin
 
-### Autenticación de cliente
-Completamente **stateless**: no hay cookies. El cliente guarda su token en `localStorage`. El endpoint `/api/customer-auth` devuelve un token en el body.
+`app/api/features/route.ts` (CORS restringido a `https://mi-superadmindrestaurante.vercel.app`)
+y `pingSuperAdmin()` en `app/api/auth/route.ts` (fire-and-forget, usa
+`SUPERADMIN_URL` + `NICHO_REGISTER_KEY`) son la única conexión real con un panel
+externo. **Nota de seguridad:** `POST /api/features` no tiene ninguna verificación
+de sesión, solo depende de CORS — CORS no protege peticiones server-to-server
+(curl, fetch de servidor). Cualquiera que conozca la URL puede sobrescribir los
+feature flags. `lib/features.ts` declara ~19 claves de `FEATURES` (incluye
+`tv`, `analytics`, `crm`, `reservaciones`, etc.) heredadas del proyecto hermano —
+la mayoría no corresponden a ninguna página real de este repo; se dejaron así por
+compatibilidad con lo que el SuperAdmin externo pueda esperar leer, no por uso
+interno.
 
----
+## Páginas reales (17)
 
-## Estructura de archivos
+| Ruta | Rol | Descripción |
+|---|---|---|
+| `/` | Cliente | Redirige a `/menu` |
+| `/menu` | Cliente | Menú digital, pedidos por WhatsApp |
+| `/review` | Cliente | Formulario de reseña |
+| `/card` | Cliente | Tarjeta de fidelización, categoría `cafe` — auto-registro por nombre+teléfono contra `/api/loyalty` |
+| `/card/2x1` | Cliente | Tarjeta de fidelización, categoría `dosxuno` |
+| `/card/descuento` | Cliente | Tarjeta de fidelización, categoría `descuento` |
+| `/card/premium` | Cliente | Tarjeta de fidelización, categoría `premium` |
+| `/admin/login` | Admin | Login (única puerta real de sesión) |
+| `/admin` | Admin | Redirige a `/admin/menu` |
+| `/admin/menu` | Admin | CRUD del menú |
+| `/admin/orders` | Admin | Lista de pedidos |
+| `/admin/reviews` | Admin | Lista de reseñas |
+| `/admin/tarjetas` | Admin | Gestión de tarjetas de lealtad + categorías de recompensa (filtro por categoría) |
+| `/admin/sellar` | Admin | Sellar visitas (QR/teléfono) + lista de tarjetas activas con botón "Sellar visita" directo |
+| `/admin/configuracion` | Admin | Identidad del restaurante (nombre/logo/colores) + alta/baja de perfiles Admin |
+| `/employee/menu` | — (pública) | Ver/editar el menú, sin sesión |
+| `/resta3/menu` | — (pública) | Ver/editar el menú, sin sesión |
 
-```
-mi-proyecto/
-├── app/
-│   ├── layout.tsx                  # Root layout — BrandProvider (nombre, logo, accent, flags)
-│   ├── page.tsx                    # Redirect a /menu (o página principal)
-│   ├── components/
-│   │   ├── BrandProvider.tsx       # Context: nombre, logo, accentColor, featureFlags
-│   │   ├── FeatureGuard.tsx        # Redirección si un módulo está deshabilitado
-│   │   ├── AdminNav.tsx            # Sidebar del admin
-│   │   ├── EmployeeNav.tsx         # Nav del empleado
-│   │   ├── CustomerNav.tsx         # Nav del cliente
-│   │   ├── Resta3Nav.tsx           # Nav de Resta3
-│   │   ├── QRScanner.tsx           # Lector de QR (html5-qrcode)
-│   │   ├── LottiePlayer.tsx        # Reproductor de animaciones Lottie
-│   │   ├── AnimationEditorModal.tsx # Editor de animaciones para slides de TV
-│   │   ├── AdminThemeToggle.tsx    # Toggle claro/oscuro para el admin
-│   │   └── animations/            # Animaciones codificadas (destacado, promo, sample)
-│   │
-│   ├── admin/                      # Panel del administrador (protegido por middleware)
-│   │   ├── layout.tsx              # Carga settings, flags y datos del admin desde Supabase
-│   │   ├── page.tsx                # Dashboard principal
-│   │   ├── login/page.tsx          # Login del admin
-│   │   ├── analytics/page.tsx      # Analytics avanzado
-│   │   ├── automatizaciones/page.tsx
-│   │   ├── configuracion/page.tsx  # Usuarios, sucursales, integraciones
-│   │   ├── contenido/page.tsx      # Multimedia y fotos del restaurante
-│   │   ├── crm/page.tsx            # Historial de clientes, segmentos
-│   │   ├── customers/page.tsx      # Perfiles y visitas de clientes
-│   │   ├── estadisticas/page.tsx
-│   │   ├── marketing/page.tsx      # Campañas Meta Ads, TikTok, Google
-│   │   ├── menu/page.tsx           # Gestión del menú (crear, editar, toggle disponibilidad)
-│   │   ├── operaciones/page.tsx    # Mesas y pedidos en tiempo real
-│   │   ├── orders/page.tsx         # Lista de pedidos activos
-│   │   ├── produccion/page.tsx     # Inventario y stock
-│   │   ├── recipes/page.tsx        # Recetario — recetas, costos
-│   │   ├── reportes/page.tsx       # Export PDF/Excel/CSV
-│   │   ├── reservaciones/page.tsx  # Reservas de mesas
-│   │   ├── reviews/page.tsx        # Reseñas buenas y malas
-│   │   ├── sellar/page.tsx         # Sellar visita del cliente (QR o teléfono)
-│   │   ├── tarjetas/page.tsx       # Tarjetas de fidelización
-│   │   ├── tv/page.tsx             # Gestión de slides para pantalla digital
-│   │   ├── tv/pantalla/[id]/page.tsx # Vista de pantalla TV (pública, sin auth)
-│   │   ├── ventas/page.tsx         # Transacciones y cierres de caja
-│   │   └── navegador/page.tsx
-│   │
-│   ├── employee/                   # Panel del empleado (protegido por middleware)
-│   │   ├── layout.tsx              # Server component — carga datos, FeatureGuard
-│   │   ├── page.tsx                # Dashboard del empleado
-│   │   ├── login/page.tsx
-│   │   ├── customers/page.tsx      # Ver/buscar clientes
-│   │   ├── menu/page.tsx           # Consultar menú
-│   │   ├── orders/page.tsx         # Gestionar pedidos activos
-│   │   ├── recipes/page.tsx        # Ver recetas
-│   │   └── tv/page.tsx             # Controlar pantalla TV
-│   │
-│   ├── resta3/                     # Módulo Resta3 — admin económico
-│   │   ├── login/page.tsx
-│   │   └── (panel)/
-│   │       ├── layout.tsx          # Carga flags de Resta3
-│   │       ├── page.tsx            # Dashboard Resta3
-│   │       ├── tpv/page.tsx        # Terminal punto de venta
-│   │       ├── mesas/page.tsx      # Gestión de mesas y salón
-│   │       ├── cocina/page.tsx     # Pantalla de cocina (KDS)
-│   │       ├── inventario/page.tsx # Stock, productos, insumos
-│   │       ├── compras/page.tsx    # Órdenes de compra a proveedores
-│   │       ├── empleados/page.tsx  # Gestión de empleados y turnos
-│   │       └── reportes/page.tsx   # Reportes de ventas
-│   │
-│   ├── api/                        # API Routes (Next.js App Router)
-│   │   ├── auth/route.ts           # POST login/register admin (action field)
-│   │   ├── admins/route.ts         # GET/POST/DELETE admins (no auto-eliminar)
-│   │   ├── analytics/route.ts      # GET estadísticas y histogramas de 7 días
-│   │   ├── customer-auth/route.ts  # POST login/register cliente (stateless)
-│   │   ├── customers/route.ts      # GET/POST clientes
-│   │   ├── customers/[id]/route.ts # PATCH multi-acción: confirm/stamp/redeem/checkin
-│   │   ├── employee/auth/route.ts  # POST login empleado → employee_session cookie
-│   │   ├── features/route.ts       # GET feature flags (solo acepta origen del superadmin)
-│   │   ├── loyalty/route.ts        # GET (admin) / POST (público) tarjetas de fidelización
-│   │   ├── loyalty/[id]/route.ts   # GET/PATCH/DELETE tarjeta individual
-│   │   ├── menu/route.ts           # GET público / POST admin
-│   │   ├── menu/[id]/route.ts      # PATCH/DELETE ítem del menú
-│   │   ├── menu/[id]/like/route.ts # POST sin auth — cualquiera puede dar like
-│   │   ├── menu/upload/route.ts    # POST subir imagen de plato
-│   │   ├── orders/route.ts         # GET sin auth / POST
-│   │   ├── orders/[id]/route.ts    # PATCH solo status (KDS sin auth)
-│   │   ├── permissions/route.ts    # GET permisos de empleado/usuario
-│   │   ├── recipes/route.ts        # GET/POST recetas
-│   │   ├── recipes/[id]/route.ts   # PATCH/DELETE receta
-│   │   ├── recipes/seed/route.ts   # POST sembrar recetas de prueba
-│   │   ├── recipes/upload/route.ts # POST subir imagen de receta
-│   │   ├── resta3/auth/route.ts    # POST login Resta3 → resta3_session cookie (24h)
-│   │   ├── resta3/features/route.ts # GET flags de Resta3 (r3_ prefix)
-│   │   ├── resta3/inventory/route.ts # GET/POST inventario
-│   │   ├── resta3/inventory/[id]/route.ts # PATCH stockDelta (relativo) / DELETE
-│   │   ├── resta3/tables/route.ts  # GET sin auth / POST con resta3_session
-│   │   ├── resta3/tables/[id]/route.ts # PATCH/DELETE mesa
-│   │   ├── reviews/route.ts        # GET dual (?all=1 admin) / POST público + email async
-│   │   ├── reviews/[id]/route.ts   # PATCH/DELETE reseña
-│   │   ├── settings/route.ts       # GET público / POST admin-only
-│   │   ├── settings/upload/route.ts # POST subir logo del restaurante
-│   │   ├── tv/route.ts             # GET (activas para TV, todas para admin) / POST slide
-│   │   ├── tv/[id]/route.ts        # PATCH/DELETE slide
-│   │   └── tv/upload/route.ts      # POST subir imagen de slide
-│   │
-│   ├── card/                       # Vistas de tarjeta de fidelización del cliente
-│   │   ├── page.tsx                # Tarjeta principal
-│   │   ├── 2x1/page.tsx            # Promo 2x1
-│   │   ├── descuento/page.tsx      # Descuento disponible
-│   │   ├── premium/page.tsx        # Tarjeta premium
-│   │   ├── usuario/page.tsx        # Vista de perfil del usuario
-│   │   └── wallet/page.tsx         # Wallet / saldo
-│   │
-│   ├── menu/page.tsx               # Menú público del restaurante
-│   ├── loyalty/page.tsx            # Registro en programa de fidelización
-│   ├── registro/page.tsx           # Registro de cliente nuevo
-│   ├── review/page.tsx             # Formulario de reseña (cliente)
-│   ├── resena/page.tsx             # Vista de reseñas del restaurante
-│   ├── salon/page.tsx              # Plano del salón (mesas en tiempo real)
-│   ├── tv/page.tsx                 # Pantalla TV pública (slides activos)
-│   ├── activate/page.tsx           # Activación de cuenta
-│   ├── bloqueado/page.tsx          # Página de acceso bloqueado
-│   ├── recetas/page.tsx            # Recetario público
-│   └── resetas/page.tsx
-│
-├── lib/                            # Capa de acceso a datos (todos usan Supabase)
-│   ├── supabase.ts                 # Cliente singleton con anon key + RLS
-│   ├── auth.ts                     # verifySession (Node.js crypto, para API routes)
-│   ├── features.ts                 # Catálogo FEATURES, fallback por restaurante, default true
-│   ├── adminDb.ts                  # CRUD admins — salt compuesto, ilike, no duplicados
-│   ├── employeeDb.ts               # CRUD empleados — prefijo "emp:" en hash
-│   ├── db.ts                       # CRUD clientes — prefijo "customer:", addStamp (max 5)
-│   ├── loyaltyDb.ts                # Tarjetas de fidelización, 90 días expiración
-│   ├── menuDb.ts                   # CRUD menú — patch dinámico sin sobrescribir campos
-│   ├── ordersDb.ts                 # CRUD pedidos — flujo: pending→preparing→ready→delivered
-│   ├── recipeDb.ts                 # CRUD recetas — ingredients/steps como JSON arrays
-│   ├── reviewDb.ts                 # Auto-publish (≥4 estrellas), auto-bad (≤3 → email)
-│   ├── tablesDb.ts                 # CRUD mesas — siempre actualiza updated_at
-│   ├── inventoryDb.ts              # CRUD inventario — campo minStock para alertas
-│   ├── tvDb.ts                     # CRUD slides — slide_order auto-asignado, getActive/getAll
-│   ├── settingsDb.ts               # Key-value genérico — upsert por clave
-│   └── email.ts                    # Nodemailer, solo para reseñas malas, fire-and-forget
-│
-├── components/                     # Componentes de UI complejos (no-page)
-│   ├── floor-plan/                 # Editor visual de plano de planta (Konva)
-│   ├── guests/GuestProfiles.tsx
-│   ├── service/                    # Panel de servicio a mesas
-│   ├── shifts/ShiftPlanner.tsx     # Planificador de turnos
-│   ├── spend/SpendAlerts.tsx       # Alertas de gasto
-│   └── timeline/TimelineView.tsx
-│
-├── middleware.ts                   # Edge Runtime — protege /admin/* y /employee/*
-├── supabase_setup.sql              # Script SQL para crear las tablas en Supabase
-└── next.config.ts                  # Config de Next.js
-```
+## Rutas API reales (21)
 
----
+| Ruta | Métodos | Auth | Notas |
+|---|---|---|---|
+| `/api/auth` | POST, DELETE | — | Login/registro/logout admin. `action: 'register'` crea el primer admin sin auth previa |
+| `/api/admins` | GET, POST, DELETE | admin | Gestión de perfiles Admin (usada por `/admin/configuracion`) |
+| `/api/employees` | GET, POST, DELETE | admin | CRUD de registros de empleado — sin uso de login real (ver arriba) |
+| `/api/resta3/users` | GET, POST, DELETE | admin | Reusa la tabla `admins` filtrando `role='Resta3'` (`lib/adminDb.ts`), no hay tabla propia |
+| `/api/menu` | GET, POST | POST: admin | GET público |
+| `/api/menu/[id]` | PATCH, DELETE | admin | |
+| `/api/menu/[id]/like` | POST | público | Incremento de likes |
+| `/api/menu/upload` | POST | admin (implícito) | Sube imagen a Supabase Storage |
+| `/api/menu/seed` | POST | admin | Siembra 4 platillos demo, usado por `scripts/seed.mjs` |
+| `/api/orders` | GET, POST | público | GET sin auth (empleado/resta3 lo consumen sin sesión) |
+| `/api/orders/[id]` | PATCH | — | Cambia `status` |
+| `/api/loyalty` | GET, POST | GET: admin | POST público (auto-registro desde `/card`) |
+| `/api/loyalty/[id]` | GET, PATCH, DELETE | admin (PATCH/DELETE) | `action`: `stamp` / `redeem` / `activate` / `deactivate` |
+| `/api/reviews` | GET, POST | GET `?all=1`: admin | POST público, dispara email si `rating <= 3` |
+| `/api/reviews/[id]` | PATCH, DELETE | admin | Sin consumidor actual en el código (ninguna página kept la usa) |
+| `/api/customers` | GET, POST | GET: admin | Modelo legacy — `POST` ya no lo usa ninguna página (el flujo de registro se borró); solo `/admin/sellar` gestiona clientes ya existentes. `GET` se protegió el 2026-08-14 (antes no tenía ninguna verificación y exponía `passwordHash` de todos los clientes) |
+| `/api/customers/[id]` | GET, PATCH, DELETE | **ninguna** | `action`: `confirm` / `stamp` / `redeem` / `checkin`. **Hueco de seguridad sin corregir**: `GET` expone `passwordHash` del cliente, y `PATCH`/`DELETE` (incluye eliminar el registro) no piden sesión — cualquiera sin login puede borrar un cliente si conoce su `id` |
+| `/api/settings` | GET, POST | POST: admin | GET público. Key-value con prefijo por restaurante (ver arriba) |
+| `/api/settings/upload` | POST | admin | Sube logos a Supabase Storage |
+| `/api/features` | GET, POST, OPTIONS | **ninguna** (solo CORS) | Ver nota de seguridad arriba |
+| `/api/tickets` | POST | admin/employee/resta3_session (cualquiera válida) | "Reportar problema" — requiere la tabla `sa_tickets`, que faltaba en la BD y se creó en la sesión de limpieza (ver `mysql_setup.sql`) |
 
-## Tablas en Supabase
+## Esquema de base de datos (8 tablas activas)
 
-| Tabla | Descripción |
-|-------|-------------|
-| `admins` | Usuarios administradores del restaurante |
-| `employees` | Empleados del restaurante |
-| `customers` | Clientes registrados |
-| `loyalty_cards` | Tarjetas de fidelización (max 5 sellos, 90 días expiración) |
-| `menu_items` | Platillos del menú |
-| `orders` | Pedidos en tiempo real |
-| `recipes` | Recetas con ingredients/steps como JSON |
-| `reviews` | Reseñas — auto-publish si rating ≥ 4, bad=true si ≤ 3 |
-| `tables` | Mesas del salón (Resta3) |
-| `inventory` | Inventario con campo minStock |
-| `tv_slides` | Slides de pantalla digital |
-| `settings` | Key-value genérico (logos, colores, feature_flags, permissions) |
+Fuente exacta de columnas: `mysql_setup.sql` (verificado contra `SHOW CREATE TABLE`
+en la base real, no es un documento teórico). Todas usan `restaurant_id VARCHAR(100)
+DEFAULT 'default'` salvo `settings` (usa prefijo de clave).
 
-### Claves importantes en `settings`
-| key | Contenido |
-|-----|-----------|
-| `feature_flags` | Flags de módulos Nicho (admin principal) |
-| `feature_flags_resta3` | Flags de módulos Resta3 (r3_ prefix) |
-| `employee_permissions` | Permisos de módulos por empleado |
-| `user_permissions` | Permisos de módulos por cliente |
+| Tabla | Para qué | Relación / notas |
+|---|---|---|
+| `menu_items` | Platillos del menú | Referenciada por nombre en `orders.items` (JSON), no hay FK real |
+| `orders` | Pedidos | `items` es JSON con snapshot de nombre/precio/cantidad, no FK a `menu_items` |
+| `loyalty_cards` | Tarjetas de fidelización (modelo nuevo) | `card_type` referencia el `id` de una categoría dentro del JSON `settings.reward_categories` — no hay FK, es texto libre |
+| `reviews` | Reseñas de clientes | `published = rating >= 4`, `bad = rating <= 3` (calculado en `lib/reviewDb.ts`, no en BD) |
+| `customers` | Clientes (modelo viejo, legacy) | Sin relación a `loyalty_cards` — son dos sistemas de fidelización paralelos, `customers` ya no recibe altas nuevas |
+| `employees` | Registros de empleado | `role` es texto libre (Mesero, Capitán, etc.), sin login funcional |
+| `admins` | Cuentas con acceso a `/admin/login` | `role='Resta3'` es un subtipo sin login funcional propio (ver arriba) |
+| `settings` | Key-value genérico | PK es `key` (con prefijo `menu-demo:` en este despliegue). Guarda `restaurant_name`, `menu_logo`, `sidebar_accent`, `reward_categories` (JSON), etc. |
 
----
+Hay **5 tablas más en la base de datos real** (`recipes`, `tv_slides`, `tables`,
+`inventory`, `birthday_registrations`) que **no tienen ningún código que las lea o
+escriba** — sus `lib/*Db.ts` y rutas API se eliminaron. Se conservan con sus datos
+existentes solo por si se quieren recuperar; no son parte del sistema activo.
 
-## Feature Flags
-
-Gestionados desde el **Super Admin** (mi-superadmindrestaurante) y leídos aquí.
-
-- `lib/features.ts` exporta el catálogo `FEATURES` y una función `getFlag(id, restaurantFlags)` que retorna `true` por defecto si el flag no existe en Supabase.
-- El componente `FeatureGuard` en `app/components/FeatureGuard.tsx` redirige si el módulo está deshabilitado.
-- El contexto `BrandProvider` inyecta los flags a todos los client components desde el layout del servidor.
-
-### Prefijos de flags
-- Sin prefijo (`ventas`, `crm`, etc.) → módulos del admin principal (Nicho)
-- `r3_` (`r3_tpv`, `r3_mesas`, etc.) → módulos de Resta3
-
----
-
-## Variables de entorno necesarias
+## Variables de entorno reales
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=       # URL del proyecto Supabase
-NEXT_PUBLIC_SUPABASE_ANON_KEY=  # Clave anónima (pública, RLS protege los datos)
-ADMIN_SECRET=                   # Secret para HMAC-SHA256 de tokens de sesión
-EMAIL_FROM=                     # Dirección remitente para reseñas malas
-EMAIL_PASS=                     # Contraseña SMTP del remitente
-EMAIL_TO=                       # Dirección donde llegan alertas de reseñas malas
+MYSQL_HOST=
+MYSQL_PORT=
+MYSQL_USER=
+MYSQL_PASSWORD=
+MYSQL_DATABASE=
+ADMIN_SECRET=                   # HMAC de sesión + salt de contraseñas
+NEXT_PUBLIC_SUPABASE_URL=       # Solo para Storage (imágenes)
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_RESTAURANT_ID=      # 'menu-demo' en este despliegue
+GMAIL_USER=                     # Opcional — alertas de reseñas malas
+GMAIL_APP_PASSWORD=
+REVIEW_EMAIL=
+SUPERADMIN_URL=                 # Opcional — beacon a panel externo en cada login
+NICHO_REGISTER_KEY=
 ```
 
----
+## Reglas de negocio verificadas
 
-## Reglas de negocio importantes
-
-### Tarjeta de fidelización
-- Máximo **5 sellos** por tarjeta (6° sello = canjeo automático)
-- Expiración **90 días** desde la última actividad
-- Se renueva la expiración en cada sello o canjeo
+### Tarjeta de fidelización (`loyalty_cards`)
+- `expires_at` rotativo (`lib/loyaltyDb.ts`), se renueva en cada sello/canjeo.
+- Categorías de recompensa (meta de sellos, premio, colores) viven en
+  `settings.reward_categories` como JSON, editables desde `/admin/tarjetas`.
 
 ### Reseñas
-- Rating **≥ 4** → `published = true` (visible al público automáticamente)
-- Rating **≤ 3** → `bad = true` → dispara email al dueño (async, no bloquea la respuesta)
+- `rating >= 4` → `published = true`. `rating <= 3` → `bad = true` + email async
+  (no bloquea la respuesta HTTP) si `GMAIL_USER`/`GMAIL_APP_PASSWORD` están
+  configurados.
 
 ### Pedidos
-- Flujo de estados: `pending` → `preparing` → `ready` → `delivered`
-- `GET /api/orders` es público (empleados y KDS lo leen sin sesión)
-- `PATCH /api/orders/[id]` solo cambia `status` (KDS sin auth)
-
-### Inventario (Resta3)
-- `PATCH /api/resta3/inventory/[id]` acepta `stockDelta` (cambio relativo, ej. `-2`)
-- `Math.max(0, stock + delta)` previene stock negativo
+- Flujo de estados: `pending → preparing → ready → delivered`.
+- `GET /api/orders` es público a propósito.
 
 ### Admins
-- No se puede eliminar el propio perfil
-- Debe haber al menos un admin activo en todo momento
-
----
-
-## Middleware (Edge Runtime)
-
-Protege `/admin/*` y `/employee/*`. Verifica la firma HMAC del token en la cookie antes de dejar pasar la petición. Si falla, redirige al login correspondiente.
-
-```
-/admin/* (salvo /admin/login)   → verifica cookie admin_session
-/employee/* (salvo /employee/login) → verifica cookie employee_session
-/resta3/* → sin middleware; la verificación se hace en cada API route
-```
-
----
-
-## CORS en `/api/features`
-
-Solo acepta el origen `https://mi-superadmindrestaurante.vercel.app`. Esto permite que el Super Admin lea los flags actuales sin exponer el endpoint a cualquier dominio.
+- No se puede eliminar el propio perfil ni dejar la tabla en 0 admins
+  (`lib/adminDb.ts` + `app/api/admins/route.ts`).
