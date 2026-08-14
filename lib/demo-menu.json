@@ -1,0 +1,58 @@
+[
+  {
+    "name": "Hamburguesa Clásica",
+    "description": "Carne de res 180g, lechuga, jitomate, queso cheddar y aderezo de la casa",
+    "price": 120,
+    "category": "Hamburguesas",
+    "available": true
+  },
+  {
+    "name": "Hamburguesa BBQ",
+    "description": "Carne de res, tocino crujiente, cebolla caramelizada y salsa BBQ ahumada",
+    "price": 145,
+    "category": "Hamburguesas",
+    "available": true
+  },
+  {
+    "name": "Pizza Margherita",
+    "description": "Salsa de tomate artesanal, mozzarella fresca y albahaca",
+    "price": 155,
+    "category": "Pizzas",
+    "available": true
+  },
+  {
+    "name": "Pizza Pepperoni",
+    "description": "Salsa de tomate, queso mozzarella y pepperoni importado",
+    "price": 170,
+    "category": "Pizzas",
+    "available": true
+  },
+  {
+    "name": "Ensalada César",
+    "description": "Lechuga romana, crutones, queso parmesano y aderezo César clásico",
+    "price": 95,
+    "category": "Ensaladas",
+    "available": true
+  },
+  {
+    "name": "Pasta Alfredo",
+    "description": "Fettuccine con salsa cremosa de mantequilla, ajo y queso parmesano",
+    "price": 130,
+    "category": "Pastas",
+    "available": true
+  },
+  {
+    "name": "Café Americano",
+    "description": "Espresso con agua caliente. Disponible en tamaño chico o grande",
+    "price": 45,
+    "category": "Bebidas",
+    "available": true
+  },
+  {
+    "name": "Cheesecake de Fresa",
+    "description": "Base de galleta, relleno de queso crema y cobertura de fresas frescas",
+    "price": 80,
+    "category": "Postres",
+    "available": true
+  }
+]

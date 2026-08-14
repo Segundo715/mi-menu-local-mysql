@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tu Opinión | [Nombre del Negocio]</title>
+    <meta
+      name="description"
+      content="Califica tu experiencia. Si es baja, cuéntanos cómo mejorar; si es alta, comparte tu reseña en Google."
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card" role="region" aria-labelledby="t1">
+        <div class="logo" aria-hidden="true">
+          <span class="logo-badge"></span>
+          <strong>Order Express</strong>
+        </div>
+        <h1 id="t1">Cuéntanos cómo te fue</h1>
+        <p class="lead">
+          Tu opinión nos ayuda a mejorar. Elige una calificación:
+        </p>
+
+        <div class="stars" role="radiogroup" aria-label="Calificación">
+          <button
+            class="star dim"
+            data-value="1"
+            role="radio"
+            aria-checked="false"
+            aria-label="1 estrella"
+          >
+            ★
+          </button>
+          <button
+            class="star dim"
+            data-value="2"
+            role="radio"
+            aria-checked="false"
+            aria-label="2 estrellas"
+          >
+            ★
+          </button>
+          <button
+            class="star dim"
+            data-value="3"
+            role="radio"
+            aria-checked="false"
+            aria-label="3 estrellas"
+          >
+            ★
+          </button>
+          <button
+            class="star dim"
+            data-value="4"
+            role="radio"
+            aria-checked="false"
+            aria-label="4 estrellas"
+          >
+            ★
+          </button>
+          <button
+            class="star dim"
+            data-value="5"
+            role="radio"
+            aria-checked="false"
+            aria-label="5 estrellas"
+          >
+            ★
+          </button>
+        </div>
+        <div id="rating-hint" class="hint" aria-live="polite">
+          Nadie verá tu correo a menos que nos lo compartas para darte
+          seguimiento.
+        </div>
+
+        <!-- Sección: 1-3 estrellas (queja interna) -->
+        <section id="sec-queja" class="section" aria-labelledby="h-queja">
+          <h2 id="h-queja">Lamentamos no haber cumplido</h2>
+          <p class="lead">
+            Déjanos tu comentario y, si deseas, un medio de contacto. Al
+            enviarlo, nuestro equipo lo revisará de inmediato.
+          </p>
+          <form id="form-queja" novalidate>
+            <div class="row">
+              <div class="col-6">
+                <label for="q-nombre">Nombre (opcional)</label>
+                <input
+                  id="q-nombre"
+                  name="nombre"
+                  type="text"
+                  placeholder="Tu nombre"
+                  autocomplete="name"
+                />
+              </div>
+              <div class="col-6">
+                <label for="q-email">Correo (opcional)</label>
+                <input
+                  id="q-email"
+                  name="email"
+                  type="email"
+                  placeholder="tu@correo.com"
+                  autocomplete="email"
+                />
+              </div>
+              <div class="col-12">
+                <label for="q-detalle">¿Qué podemos mejorar? (requerido)</label>
+                <textarea
+                  id="q-detalle"
+                  name="detalle"
+                  placeholder="Cuéntanos con detalle tu experiencia"
+                  required
+                  minlength="10"
+                ></textarea>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="submit" class="btn btn-primary">
+                Enviar queja
+              </button>
+              <button type="button" id="btn-mailto" class="btn btn-ghost">
+                Enviar por correo
+              </button>
+            </div>
+            <p id="msg-queja" class="notice" hidden></p>
+          </form>
+        </section>
+
+        <!-- Sección: 4-5 estrellas (redirigir a Google) -->
+        <section id="sec-google" class="section" aria-labelledby="h-google">
+          <h2 id="h-google">¡Gracias! ¿Nos dejas una reseña en Google?</h2>
+          <p class="lead">
+            Esto nos ayuda muchísimo a seguir creciendo. Abre el formulario
+            oficial de Google y publica tu experiencia.
+          </p>
+          <div class="actions">
+            <a
+              id="btn-google"
+              class="btn btn-primary"
+              rel="noopener"
+              target="_blank"
+              >Escribir reseña en Google</a
+            >
+            <button id="btn-copy-link" class="btn btn-secondary" type="button">
+              Copiar enlace
+            </button>
+          </div>
+          <p class="hint">
+            Si el botón no abre, revisa que tu bloqueador de ventanas emergentes
+            esté desactivado.
+          </p>
+        </section>
+
+        <div class="footer">
+          <small
+            >© <span id="year"></span> Order Express  Gracias por tu
+            tiempo.</small
+          >
+        </div>
+      </div>
+    </div>
+    <script src="acction.js"></script>
+  </body>
+</html>

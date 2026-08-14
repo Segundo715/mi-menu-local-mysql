@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ===== Tema del panel /admin (oscuro por defecto, claro opcional) =====
+   Las páginas del admin referencian estos tokens vía var(--ad-*).
+   El tema se conmuta con el atributo data-admin-theme en <html>. */
+:root,
+[data-admin-theme="light"] {
+  --ad-bg:       #f3f5fb;
+  --ad-card:     #ffffff;
+  --ad-elevated: #eef1f8;
+  --ad-accent:   #96082f;
+  --ad-text:     #0d1426;
+  --ad-sub:      #5b6884;
+  --ad-border:   rgba(0, 0, 0, 0.12);
+  --ad-sidebar:  #ffffff;
+  --ad-overlay:  rgba(0, 0, 0, 0.04);
+}
+
+[data-admin-theme="dark"] {
+  --ad-bg:       #080b16;
+  --ad-card:     #0e1225;
+  --ad-elevated: #181d3a;
+  --ad-accent:   #B90F45;
+  --ad-text:     #eef2f7;
+  --ad-sub:      #6b7a94;
+  --ad-border:   rgba(255, 255, 255, 0.07);
+  --ad-sidebar:  #060911;
+  --ad-overlay:  rgba(255, 255, 255, 0.04);
+}
+
+/* Icono del toggle de tema: el sol se ve en oscuro, la luna en claro */
+.ad-icon-dark { display: none; }
+[data-admin-theme="dark"] .ad-icon-light { display: none; }
+[data-admin-theme="dark"] .ad-icon-dark { display: block; }
+
+/* Logo de la agencia: blanco completo en modo oscuro, original en claro */
+.ad-logo { filter: none; }
+[data-admin-theme="dark"] .ad-logo { filter: brightness(0) invert(1); }
+
+/* Hover de los enlaces del menú lateral: usa el color seleccionado y texto contrastante */
+.ad-navlink:not(.is-active):hover {
+  background-color: var(--ad-nav-hover);
+  color: var(--ad-nav-hover-text) !important;
+}
+
+html {
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%; /* iOS Safari < 16 */
+}
+
+/* Scrollbar personalizado — solo en navegadores que lo soporten (no Safari) */
+@supports (scrollbar-color: auto) {
+  html {
+    scrollbar-color: var(--ad-accent, #B90F45) transparent;
+    scrollbar-width: thin;
+  }
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--ad-accent, #B90F45);
+  border-radius: 999px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Scroll del recetario: usa el color de marca configurable (--recetas-guinda) */
+.recipe-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--recetas-guinda, #B90F45) transparent;
+}
+.recipe-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.recipe-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.recipe-scroll::-webkit-scrollbar-thumb {
+  background: var(--recetas-guinda, #B90F45);
+  border-radius: 999px;
+}

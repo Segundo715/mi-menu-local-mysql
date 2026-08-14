@@ -1,0 +1,52 @@
+{
+  "name": "mi-proyecto",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "seed": "node --env-file=.env.local scripts/seed.mjs",
+    "seed:1": "node --env-file=.env.local scripts/seed.mjs 1",
+    "seed:2": "node --env-file=.env.local scripts/seed.mjs 2",
+    "seed:3": "node --env-file=.env.local scripts/seed.mjs 3",
+    "seed:menu": "node --env-file=.env.local scripts/seed.mjs menu",
+    "seed:rec": "node --env-file=.env.local scripts/seed.mjs rec",
+    "seed:ped": "node --env-file=.env.local scripts/seed.mjs ped",
+    "seed:res": "node --env-file=.env.local scripts/seed.mjs res",
+    "seed:inv": "node --env-file=.env.local scripts/seed.mjs inv",
+    "seed:tv": "node --env-file=.env.local scripts/seed.mjs tv",
+    "seed:leal": "node --env-file=.env.local scripts/seed.mjs leal",
+    "seed:emp": "node --env-file=.env.local scripts/seed.mjs emp",
+    "seed:adm": "node --env-file=.env.local scripts/seed.mjs adm",
+    "seed:todo": "node --env-file=.env.local scripts/seed.mjs todo"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.106.2",
+    "html5-qrcode": "^2.3.8",
+    "konva": "^10.3.0",
+    "lottie-react": "^2.4.1",
+    "mysql2": "^3.15.4",
+    "next": "16.2.6",
+    "nodemailer": "^8.0.7",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-konva": "^19.2.4",
+    "react-qr-code": "^2.0.21",
+    "sharp": "^0.35.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/nodemailer": "^8.0.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/sharp": "^0.31.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.6",
+    "pg": "^8.21.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
