@@ -1,4 +1,4 @@
-import { query } from '@/lib/mysql'
+import { getDb } from '@/lib/mongodb'
 import { getFeatureFlags } from '@/lib/features'
 
 // Sin caché: el SuperAdmin necesita ver y cambiar el estado en tiempo real.
@@ -30,12 +30,10 @@ export async function POST(req: Request) {
   const settingsKey: string = body.settingsKey ?? 'feature_flags'
   const flags = body.flags ?? body
 
-  // upsert: crea la fila si no existe, la actualiza si ya existe.
+  // upsert: crea el documento si no existe, lo actualiza si ya existe.
   try {
-    await query(
-      'INSERT INTO settings (`key`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-      [settingsKey, JSON.stringify(flags)],
-    )
+    const settings = (await getDb()).collection<{ _id: string; value: string }>('settings')
+    await settings.updateOne({ _id: settingsKey }, { $set: { value: JSON.stringify(flags) } }, { upsert: true })
   } catch (e) {
     return Response.json({ error: (e as Error).message }, { status: 500, headers: CORS })
   }

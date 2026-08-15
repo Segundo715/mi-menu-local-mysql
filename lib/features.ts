@@ -1,4 +1,4 @@
-import { query } from './mysql'
+import { getDb } from './mongodb'
 
 // Catálogo de todas las features del sistema.
 // El SuperAdmin activa/desactiva estos módulos por restaurante desde mi-superadmindrestaurante.
@@ -36,9 +36,10 @@ export async function getFeatureFlags(): Promise<FeatureFlags> {
   const keys = rid ? [`feature_flags_${rid}`, 'feature_flags'] : ['feature_flags']
 
   let overrides: Partial<FeatureFlags> = {}
+  const settings = (await getDb()).collection<{ _id: string; value: string }>('settings')
   for (const key of keys) {
-    const rows = await query<{ value: string }>('SELECT value FROM settings WHERE `key` = ? LIMIT 1', [key])
-    if (rows[0]?.value) { overrides = JSON.parse(rows[0].value); break }
+    const doc = await settings.findOne({ _id: key })
+    if (doc?.value) { overrides = JSON.parse(doc.value); break }
   }
 
   // Si una feature no está en la base de datos, se asume habilitada por defecto.

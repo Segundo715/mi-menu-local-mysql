@@ -28,15 +28,20 @@ lee la línea `- Local: http://localhost:XXXX`.
 `npm run dev` que el usuario ya tuviera corriendo para otra cosa. Para parar
 solo el servidor que tú arrancaste, guarda su PID y mata solo ese proceso.
 
-**Cuidado con `npm run dev` y MySQL:** `lib/mysql.ts` cachea el pool de
-conexiones en `global` precisamente para sobrevivir el hot-reload de Next.js —
+**Cuidado con `npm run dev` y MongoDB:** `lib/mongodb.ts` cachea el cliente de
+conexión en `global` precisamente para sobrevivir el hot-reload de Next.js —
 si por algún motivo se edita ese archivo para quitar el cacheo, cada guardado
-crea 10 conexiones nuevas sin cerrar las anteriores y agota `max_connections`
-de MySQL (`Too many connections`). Si eso pasa, buscar procesos `node`
-huérfanos con conexiones abiertas al puerto 3306 (`netstat -ano` en Windows)
-antes que asumir que el servicio MySQL está caído.
+abriría una conexión nueva sin cerrar la anterior.
 
-## Seeds (poblar MySQL)
+## Migrar datos desde el MySQL local (una sola vez)
+
+Si el MySQL local todavía tiene datos reales que no se migraron a MongoDB
+Atlas: `npm run migrate:mongo` (usa `scripts/migrate-mysql-to-mongo.mjs`).
+Requiere `MONGODB_URI` real en `.env.local` y que el MySQL de origen siga
+corriendo en `localhost:3306` (o pasar `SOURCE_MYSQL_*` para apuntar a otro).
+Es idempotente — correrlo varias veces no duplica documentos.
+
+## Seeds (poblar MongoDB)
 
 Requieren `.env.local` con las variables de entorno (ver abajo) y contra un
 servidor de desarrollo corriendo (pegan vía HTTP a `APP_URL`, por defecto la
@@ -86,11 +91,8 @@ eliminaron), así que no hace falta cookie para probarlas.
 ## Variables de entorno (`.env.local`)
 
 ```
-MYSQL_HOST=
-MYSQL_PORT=
-MYSQL_USER=
-MYSQL_PASSWORD=
-MYSQL_DATABASE=
+MONGODB_URI=
+MONGODB_DB=
 ADMIN_SECRET=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
@@ -100,8 +102,9 @@ GMAIL_APP_PASSWORD=
 REVIEW_EMAIL=
 ```
 
-MySQL es la base de datos real (todas las tablas). Las dos claves de Supabase
-son **solo** para subir imágenes a Supabase Storage (`app/api/menu/upload`,
-`app/api/settings/upload`) — Supabase no guarda ninguna tabla de este proyecto.
-`GMAIL_USER`/`GMAIL_APP_PASSWORD`/`REVIEW_EMAIL` son opcionales, solo para el
-correo de alerta cuando llega una reseña con rating ≤ 3.
+MongoDB Atlas es la base de datos real (todas las colecciones). Las dos claves
+de Supabase son **solo** para subir imágenes a Supabase Storage
+(`app/api/menu/upload`, `app/api/settings/upload`) — Supabase no guarda
+ninguna colección de datos de este proyecto. `GMAIL_USER`/`GMAIL_APP_PASSWORD`/
+`REVIEW_EMAIL` son opcionales, solo para el correo de alerta cuando llega una
+reseña con rating ≤ 3.

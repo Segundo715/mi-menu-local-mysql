@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server'
-import { randomUUID } from 'node:crypto'
 import { verifySession } from '@/lib/auth'
-import { query } from '@/lib/mysql'
+import { getAllMenuItems, createMenuItem } from '@/lib/menuDb'
 import demoMenu from '@/lib/demo-menu.json'
 
 export async function POST(req: NextRequest) {
@@ -11,16 +10,14 @@ export async function POST(req: NextRequest) {
   let created = 0
   let skipped = 0
 
+  const existingNames = new Set((await getAllMenuItems()).map(i => i.name))
+
   for (const item of demoMenu) {
-    const existing = await query('SELECT id FROM menu_items WHERE name = ? LIMIT 1', [item.name])
-
-    if (existing[0]) { skipped++; continue }
-
-    await query(
-      `INSERT INTO menu_items (id, name, description, price, category, available, likes)
-       VALUES (?, ?, ?, ?, ?, ?, 0)`,
-      [randomUUID(), item.name, item.description, item.price, item.category, item.available],
-    )
+    if (existingNames.has(item.name)) { skipped++; continue }
+    await createMenuItem({
+      name: item.name, description: item.description, price: item.price,
+      category: item.category, available: item.available, likes: 0,
+    })
     created++
   }
 

@@ -1,4 +1,4 @@
-import { query, toIso } from './mysql'
+import { getDb } from './mongodb'
 import { randomUUID } from 'node:crypto'
 
 const RID = process.env.NEXT_PUBLIC_RESTAURANT_ID || 'default'
@@ -13,64 +13,75 @@ export interface Review {
   bad: boolean
 }
 
-function toReview(row: Record<string, unknown>): Review {
+interface ReviewDoc {
+  _id: string
+  customerName: string
+  rating: number
+  comment: string
+  published: boolean
+  bad: boolean
+  createdAt: Date
+  restaurantId: string
+}
+
+function toReview(doc: ReviewDoc): Review {
   return {
-    id: row.id as string,
-    customerName: row.customer_name as string,
-    rating: row.rating as number,
-    comment: (row.comment as string) ?? '',
-    createdAt: toIso(row.created_at)!,
-    published: Boolean(row.published),
-    bad: Boolean(row.bad),
+    id: doc._id,
+    customerName: doc.customerName,
+    rating: doc.rating,
+    comment: doc.comment ?? '',
+    createdAt: doc.createdAt.toISOString(),
+    published: Boolean(doc.published),
+    bad: Boolean(doc.bad),
   }
 }
 
+async function col() {
+  return (await getDb()).collection<ReviewDoc>('reviews')
+}
+
 export async function getAllReviews(): Promise<Review[]> {
-  const rows = await query('SELECT * FROM reviews WHERE restaurant_id = ? ORDER BY created_at DESC', [RID])
-  return rows.map(toReview)
+  const docs = await (await col()).find({ restaurantId: RID }).sort({ createdAt: -1 }).toArray()
+  return docs.map(toReview)
 }
 
 export async function getPublishedReviews(): Promise<Review[]> {
-  const rows = await query(
-    'SELECT * FROM reviews WHERE restaurant_id = ? AND published = true ORDER BY created_at DESC',
-    [RID],
-  )
-  return rows.map(toReview)
+  const docs = await (await col()).find({ restaurantId: RID, published: true }).sort({ createdAt: -1 }).toArray()
+  return docs.map(toReview)
 }
 
 export async function createReview(data: Pick<Review, 'customerName' | 'rating' | 'comment'>): Promise<Review> {
-  const id = randomUUID()
-  const createdAt = new Date()
   // Rating ≤ 3 → reseña negativa (dispara alerta por email al admin).
   const bad = data.rating <= 3
   // Rating ≥ 4 → se publica automáticamente en el menú público.
   const published = data.rating >= 4
-  await query(
-    `INSERT INTO reviews (id, customer_name, rating, comment, bad, published, created_at, restaurant_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, data.customerName, data.rating, data.comment, bad, published, createdAt, RID],
-  )
-  return toReview({
-    id, customer_name: data.customerName, rating: data.rating, comment: data.comment,
-    bad, published, created_at: createdAt,
-  })
+  const doc: ReviewDoc = {
+    _id: randomUUID(),
+    customerName: data.customerName,
+    rating: data.rating,
+    comment: data.comment,
+    bad,
+    published,
+    createdAt: new Date(),
+    restaurantId: RID,
+  }
+  await (await col()).insertOne(doc)
+  return toReview(doc)
 }
 
 export async function updateReview(id: string, patch: Partial<Review>): Promise<Review | null> {
-  const sets: string[] = []
-  const params: unknown[] = []
-  if (patch.published !== undefined) { sets.push('published = ?'); params.push(patch.published) }
-  if (patch.bad !== undefined)       { sets.push('bad = ?'); params.push(patch.bad) }
-  if (patch.comment !== undefined)   { sets.push('comment = ?'); params.push(patch.comment) }
-  if (sets.length > 0) {
-    params.push(id)
-    await query(`UPDATE reviews SET ${sets.join(', ')} WHERE id = ?`, params)
+  const set: Partial<ReviewDoc> = {}
+  if (patch.published !== undefined) set.published = patch.published
+  if (patch.bad !== undefined)       set.bad = patch.bad
+  if (patch.comment !== undefined)   set.comment = patch.comment
+  if (Object.keys(set).length > 0) {
+    await (await col()).updateOne({ _id: id }, { $set: set })
   }
-  const rows = await query('SELECT * FROM reviews WHERE id = ? LIMIT 1', [id])
-  return rows[0] ? toReview(rows[0]) : null
+  const doc = await (await col()).findOne({ _id: id })
+  return doc ? toReview(doc) : null
 }
 
 export async function deleteReview(id: string): Promise<boolean> {
-  await query('DELETE FROM reviews WHERE id = ?', [id])
+  await (await col()).deleteOne({ _id: id })
   return true
 }

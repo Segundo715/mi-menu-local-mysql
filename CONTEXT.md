@@ -21,16 +21,16 @@ código.
 |---|---|
 | Framework | Next.js 16.2.6 — App Router, `next dev --webpack` |
 | UI | React 19.2.4 + TypeScript, Tailwind CSS 4 |
-| **Base de datos** | **MySQL** vía `mysql2/promise` (`lib/mysql.ts`) — todas las tablas |
+| **Base de datos** | **MongoDB Atlas** vía driver oficial `mongodb` (`lib/mongodb.ts`) — todas las colecciones |
 | **Storage de imágenes** | **Supabase Storage únicamente** (`lib/supabase.ts`) — Supabase no guarda ninguna tabla de datos de este proyecto |
 | Email | Nodemailer, solo para alertar reseñas con rating ≤ 3 |
 | QR | `html5-qrcode` (leer, en `/admin/sellar`), `react-qr-code` (generar) |
 | Auth | HMAC-SHA256 sin estado (`lib/auth.ts`), verificado en `proxy.ts` (Node.js runtime — en Next 16 el antiguo "middleware" se llama Proxy) |
 | Deploy | Vercel |
 
-El pool de MySQL (`lib/mysql.ts`) se cachea en `global` a propósito — sin eso, el
-hot-reload de `next dev` re-ejecuta el módulo en cada guardado y crea un pool nuevo
-de 10 conexiones sin cerrar el anterior, agotando `max_connections` del servidor.
+El cliente de MongoDB (`lib/mongodb.ts`) se cachea en `global` a propósito — sin eso,
+el hot-reload de `next dev` re-ejecuta el módulo en cada guardado y abriría una
+conexión nueva en cada uno (misma lección aprendida cuando este proyecto usaba MySQL).
 
 ## Autenticación — estado real
 
@@ -117,38 +117,35 @@ interno.
 | `/api/settings` | GET, POST | POST: admin | GET público. Key-value con prefijo por restaurante (ver arriba) |
 | `/api/settings/upload` | POST | admin | Sube logos a Supabase Storage |
 | `/api/features` | GET, POST, OPTIONS | **ninguna** (solo CORS) | Ver nota de seguridad arriba |
-| `/api/tickets` | POST | admin/employee/resta3_session (cualquiera válida) | "Reportar problema" — requiere la tabla `sa_tickets`, que faltaba en la BD y se creó en la sesión de limpieza (ver `mysql_setup.sql`) |
+| `/api/tickets` | POST | admin/employee/resta3_session (cualquiera válida) | "Reportar problema" — escribe en la colección `sa_tickets` (ver `mongodb_setup.md`) |
 
-## Esquema de base de datos (8 tablas activas)
+## Esquema de base de datos (8 colecciones activas)
 
-Fuente exacta de columnas: `mysql_setup.sql` (verificado contra `SHOW CREATE TABLE`
-en la base real, no es un documento teórico). Todas usan `restaurant_id VARCHAR(100)
-DEFAULT 'default'` salvo `settings` (usa prefijo de clave).
+Fuente exacta de campos e índices: `mongodb_setup.md` (reemplaza a
+`mysql_setup.sql`, retirado en la migración a MongoDB). Todas usan
+`restaurantId: string` salvo `settings` (usa prefijo en el propio `_id`). Los
+`_id` son los mismos UUID string que ya generaba la app — no se usa `ObjectId`.
 
-| Tabla | Para qué | Relación / notas |
+| Colección | Para qué | Relación / notas |
 |---|---|---|
-| `menu_items` | Platillos del menú | Referenciada por nombre en `orders.items` (JSON), no hay FK real |
-| `orders` | Pedidos | `items` es JSON con snapshot de nombre/precio/cantidad, no FK a `menu_items` |
-| `loyalty_cards` | Tarjetas de fidelización (modelo nuevo) | `card_type` referencia el `id` de una categoría dentro del JSON `settings.reward_categories` — no hay FK, es texto libre |
-| `reviews` | Reseñas de clientes | `published = rating >= 4`, `bad = rating <= 3` (calculado en `lib/reviewDb.ts`, no en BD) |
+| `menu_items` | Platillos del menú | Referenciada por nombre en `orders.items` (array embebido), sin relación real |
+| `orders` | Pedidos | `items` es un array embebido con snapshot de nombre/precio/cantidad, sin relación a `menu_items` |
+| `loyalty_cards` | Tarjetas de fidelización (modelo nuevo) | `cardType` referencia el `id` de una categoría dentro del JSON `settings.reward_categories` — sin relación real, es texto libre |
+| `reviews` | Reseñas de clientes | `published = rating >= 4`, `bad = rating <= 3` (calculado en `lib/reviewDb.ts`, no en la BD) |
 | `customers` | Clientes (modelo viejo, legacy) | Sin relación a `loyalty_cards` — son dos sistemas de fidelización paralelos, `customers` ya no recibe altas nuevas |
 | `employees` | Registros de empleado | `role` es texto libre (Mesero, Capitán, etc.), sin login funcional |
 | `admins` | Cuentas con acceso a `/admin/login` | `role='Resta3'` es un subtipo sin login funcional propio (ver arriba) |
-| `settings` | Key-value genérico | PK es `key` (con prefijo `menu-demo:` en este despliegue). Guarda `restaurant_name`, `menu_logo`, `sidebar_accent`, `reward_categories` (JSON), etc. |
+| `settings` | Key-value genérico | `_id` es la key (con prefijo `menu-demo:` en este despliegue). Guarda `restaurant_name`, `menu_logo`, `sidebar_accent`, `reward_categories` (JSON), etc. |
 
-Hay **5 tablas más en la base de datos real** (`recipes`, `tv_slides`, `tables`,
-`inventory`, `birthday_registrations`) que **no tienen ningún código que las lea o
-escriba** — sus `lib/*Db.ts` y rutas API se eliminaron. Se conservan con sus datos
-existentes solo por si se quieren recuperar; no son parte del sistema activo.
+Hay **5 tablas más que existían en el MySQL de origen** (`recipes`, `tv_slides`,
+`tables`, `inventory`, `birthday_registrations`) que **no tenían ningún código que
+las leyera o escribiera** desde antes de la migración — no se copiaron a MongoDB.
 
 ## Variables de entorno reales
 
 ```
-MYSQL_HOST=
-MYSQL_PORT=
-MYSQL_USER=
-MYSQL_PASSWORD=
-MYSQL_DATABASE=
+MONGODB_URI=                    # Connection string completo de MongoDB Atlas
+MONGODB_DB=                     # Nombre de la base, default 'mi_menu'
 ADMIN_SECRET=                   # HMAC de sesión + salt de contraseñas
 NEXT_PUBLIC_SUPABASE_URL=       # Solo para Storage (imágenes)
 NEXT_PUBLIC_SUPABASE_ANON_KEY=

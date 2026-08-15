@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "migrate:mongo": "node --env-file=.env.local scripts/migrate-mysql-to-mongo.mjs",
     "seed": "node --env-file=.env.local scripts/seed.mjs",
     "seed:1": "node --env-file=.env.local scripts/seed.mjs 1",
     "seed:2": "node --env-file=.env.local scripts/seed.mjs 2",
@@ -22,7 +23,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
     "html5-qrcode": "^2.3.8",
-    "mysql2": "^3.15.4",
+    "mongodb": "^7.5.0",
     "next": "16.2.6",
     "nodemailer": "^8.0.7",
     "react": "19.2.4",
@@ -39,6 +40,7 @@
     "@types/sharp": "^0.31.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "mysql2": "^3.23.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

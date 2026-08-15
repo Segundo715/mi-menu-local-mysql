@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { randomUUID } from 'node:crypto'
-import { query } from '@/lib/mysql'
+import { getDb } from '@/lib/mongodb'
 import { verifySession } from '@/lib/auth'
 import { getSetting } from '@/lib/settingsDb'
 
@@ -21,11 +21,19 @@ export async function POST(req: NextRequest) {
   const restaurantName = await getSetting('restaurant_name')
 
   try {
-    await query(
-      `INSERT INTO sa_tickets (id, restaurant_id, restaurant_name, from_name, from_role, message)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [randomUUID(), RID, restaurantName || RID, from_name || 'Desconocido', from_role || 'Usuario', message.trim()],
-    )
+    const tickets = (await getDb()).collection<{
+      _id: string; restaurantId: string; restaurantName: string; fromName: string; fromRole: string
+      message: string; createdAt: Date
+    }>('sa_tickets')
+    await tickets.insertOne({
+      _id: randomUUID(),
+      restaurantId: RID,
+      restaurantName: restaurantName || RID,
+      fromName: from_name || 'Desconocido',
+      fromRole: from_role || 'Usuario',
+      message: message.trim(),
+      createdAt: new Date(),
+    })
   } catch {
     return Response.json({ error: 'Error al enviar reporte' }, { status: 500 })
   }

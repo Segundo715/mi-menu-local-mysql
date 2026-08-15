@@ -1,4 +1,4 @@
-import { query, toIso } from './mysql'
+import { getDb } from './mongodb'
 import { randomUUID, createHash } from 'node:crypto'
 
 const RID = process.env.NEXT_PUBLIC_RESTAURANT_ID || 'default'
@@ -18,6 +18,15 @@ export interface EmployeeListItem {
   createdAt: string
 }
 
+interface EmployeeDoc {
+  _id: string
+  name: string
+  role: string
+  passwordHash: string
+  createdAt: Date
+  restaurantId: string
+}
+
 // Prefijo "emp:" separa los hashes de empleados de los de admins.
 // Así, aunque tengan el mismo nombre y contraseña, sus hashes son distintos.
 function hashPassword(name: string, password: string): string {
@@ -25,60 +34,63 @@ function hashPassword(name: string, password: string): string {
   return createHash('sha256').update(`emp:${secret}:${name.toLowerCase()}:${password}`).digest('hex')
 }
 
-function toEmployee(row: Record<string, unknown>): EmployeeUser {
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function toEmployee(doc: EmployeeDoc): EmployeeUser {
   return {
-    id: row.id as string,
-    name: row.name as string,
-    role: (row.role as string) || 'Mesero',
-    passwordHash: row.password_hash as string,
-    createdAt: toIso(row.created_at)!,
+    id: doc._id,
+    name: doc.name,
+    role: doc.role || 'Mesero',
+    passwordHash: doc.passwordHash,
+    createdAt: doc.createdAt.toISOString(),
   }
 }
 
+async function col() {
+  return (await getDb()).collection<EmployeeDoc>('employees')
+}
+
 export async function createEmployee(name: string, password: string, role = 'Mesero'): Promise<EmployeeUser | null> {
-  const existing = await query('SELECT id FROM employees WHERE LOWER(name) = LOWER(?) AND restaurant_id = ? LIMIT 1', [name, RID])
-  if (existing[0]) return null
-  const id = randomUUID()
-  const createdAt = new Date()
-  await query(
-    `INSERT INTO employees (id, name, password_hash, role, created_at, restaurant_id) VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, name.trim(), hashPassword(name, password), role.trim(), createdAt, RID],
-  )
-  return toEmployee({ id, name: name.trim(), password_hash: hashPassword(name, password), role: role.trim(), created_at: createdAt })
+  const existing = await (await col()).findOne({ restaurantId: RID, name: { $regex: `^${escapeRegex(name)}$`, $options: 'i' } })
+  if (existing) return null
+  const doc: EmployeeDoc = {
+    _id: randomUUID(),
+    name: name.trim(),
+    passwordHash: hashPassword(name, password),
+    role: role.trim(),
+    createdAt: new Date(),
+    restaurantId: RID,
+  }
+  await (await col()).insertOne(doc)
+  return toEmployee(doc)
 }
 
 export async function listEmployees(): Promise<EmployeeListItem[]> {
-  const rows = await query(
-    'SELECT id, name, role, created_at FROM employees WHERE restaurant_id = ? ORDER BY created_at ASC',
-    [RID],
-  )
-  return rows.map(r => ({
-    id: r.id as string,
-    name: r.name as string,
-    role: (r.role as string) || 'Mesero',
-    createdAt: toIso(r.created_at)!,
-  }))
+  const docs = await (await col()).find({ restaurantId: RID }).sort({ createdAt: 1 }).toArray()
+  return docs.map(d => ({ id: d._id, name: d.name, role: d.role || 'Mesero', createdAt: d.createdAt.toISOString() }))
 }
 
 export async function getEmployeeById(id: string): Promise<EmployeeUser | undefined> {
-  const rows = await query('SELECT * FROM employees WHERE id = ? LIMIT 1', [id])
-  return rows[0] ? toEmployee(rows[0]) : undefined
+  const doc = await (await col()).findOne({ _id: id })
+  return doc ? toEmployee(doc) : undefined
 }
 
 export async function countEmployees(): Promise<number> {
-  const [{ count }] = await query<{ count: number }>('SELECT COUNT(*) AS count FROM employees WHERE restaurant_id = ?', [RID])
-  return count ?? 0
+  return (await col()).countDocuments({ restaurantId: RID })
 }
 
 export async function deleteEmployee(id: string): Promise<void> {
-  await query('DELETE FROM employees WHERE id = ?', [id])
+  await (await col()).deleteOne({ _id: id })
 }
 
 export async function authenticateEmployee(name: string, password: string): Promise<EmployeeUser | null> {
   const hash = hashPassword(name, password)
-  const rows = await query(
-    'SELECT * FROM employees WHERE LOWER(name) = LOWER(?) AND password_hash = ? AND restaurant_id = ? LIMIT 1',
-    [name, hash, RID],
-  )
-  return rows[0] ? toEmployee(rows[0]) : null
+  const doc = await (await col()).findOne({
+    restaurantId: RID,
+    passwordHash: hash,
+    name: { $regex: `^${escapeRegex(name)}$`, $options: 'i' },
+  })
+  return doc ? toEmployee(doc) : null
 }
