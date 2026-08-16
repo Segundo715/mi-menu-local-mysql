@@ -538,8 +538,12 @@ export default function AdminTarjetasPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden shrink-0"
                     style={{ backgroundColor: `${draft.color}22`, border: `1px solid ${S.border}` }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={draft.logo || '/logo.png'} alt="logo" className="w-10 h-10 object-contain" />
+                    {draft.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={draft.logo} alt="logo" className="w-10 h-10 object-contain" />
+                    ) : (
+                      <RewardIcon name={draft.icon} size={22} style={{ color: draft.color }} />
+                    )}
                   </div>
                   <label className="px-4 py-2 rounded-2xl text-sm font-bold cursor-pointer transition-all"
                     style={{ backgroundColor: `${S.accent}22`, color: S.accent }}>
@@ -547,6 +551,11 @@ export default function AdminTarjetasPage() {
                     <input type="file" accept="image/*" className="hidden"
                       onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage('logo', f) }} />
                   </label>
+                  {draft.logo && (
+                    <button onClick={() => setDraft(d => ({ ...d, logo: '' }))}
+                      className="px-4 py-2 rounded-2xl text-sm font-bold"
+                      style={{ backgroundColor: 'rgba(239,68,68,.08)', color: '#f87171' }}>Quitar logo</button>
+                  )}
                 </div>
                 <p className="text-xs mt-1" style={{ color: S.sub }}>PNG/SVG con fondo transparente</p>
               </div>
