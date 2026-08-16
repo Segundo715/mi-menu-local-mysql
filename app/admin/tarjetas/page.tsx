@@ -538,11 +538,9 @@ export default function AdminTarjetasPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden shrink-0"
                     style={{ backgroundColor: `${draft.color}22`, border: `1px solid ${S.border}` }}>
-                    {draft.logo ? (
+                    {draft.logo && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={draft.logo} alt="logo" className="w-10 h-10 object-contain" />
-                    ) : (
-                      <RewardIcon name={draft.icon} size={22} style={{ color: draft.color }} />
                     )}
                   </div>
                   <label className="px-4 py-2 rounded-2xl text-sm font-bold cursor-pointer transition-all"
