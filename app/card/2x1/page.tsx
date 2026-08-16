@@ -154,8 +154,6 @@ export default function Card2x1Page() {
             {submitting ? 'Cargando...' : 'Ver mi cupón'}
           </button>
         </div>
-
-        <CustomerNav active="card" />
       </div>
     )
   }

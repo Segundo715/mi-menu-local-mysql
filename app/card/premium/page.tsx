@@ -155,8 +155,6 @@ export default function CardPremiumPage() {
             {submitting ? 'Cargando...' : 'Ver mi versión Premium'}
           </button>
         </div>
-
-        <CustomerNav active="card" />
       </div>
     )
   }

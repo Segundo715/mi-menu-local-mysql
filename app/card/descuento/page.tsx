@@ -162,8 +162,6 @@ export default function CardDescuentoPage() {
             {submitting ? 'Cargando...' : 'Ver mi descuento'}
           </button>
         </div>
-
-        <CustomerNav active="card" />
       </div>
     )
   }
