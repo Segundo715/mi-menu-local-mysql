@@ -227,8 +227,11 @@ export default function AdminTarjetasPage() {
     load()
   }
 
-  const filtered = cards.filter(c => {
-    if (categoryFilter !== 'todas' && (c.cardType ?? 'cafe') !== categoryFilter) return false
+  const categoryCards = categoryFilter === 'todas'
+    ? cards
+    : cards.filter(c => (c.cardType ?? 'cafe') === categoryFilter)
+
+  const filtered = categoryCards.filter(c => {
     const days = daysLeft(c.expiresAt)
     if (filter === 'activas') return c.active
     if (filter === 'inactivas') return !c.active
@@ -237,10 +240,10 @@ export default function AdminTarjetasPage() {
   })
 
   const stats = {
-    total: cards.length,
-    activas: cards.filter(c => c.active).length,
-    inactivas: cards.filter(c => !c.active).length,
-    vencidas: cards.filter(c => { const d = daysLeft(c.expiresAt); return d !== null && d <= 0 }).length,
+    total: categoryCards.length,
+    activas: categoryCards.filter(c => c.active).length,
+    inactivas: categoryCards.filter(c => !c.active).length,
+    vencidas: categoryCards.filter(c => { const d = daysLeft(c.expiresAt); return d !== null && d <= 0 }).length,
   }
 
   return (
@@ -685,7 +688,16 @@ export default function AdminTarjetasPage() {
         {/* Filtrar por categoría */}
         {categories.length > 0 && (
           <div>
-            <p className="text-xs font-semibold mb-1.5" style={{ color: S.sub }}>Filtrar por categoría</p>
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <p className="text-xs font-semibold" style={{ color: S.sub }}>Filtrar por categoría</p>
+              {categoryFilter !== 'todas' && CARD_URLS[categoryFilter] && (
+                <a href={CARD_URLS[categoryFilter]} target="_blank" rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                  style={{ backgroundColor: S.bg, color: S.accent, border: `1px solid ${S.accent}` }}>
+                  Ver tarjeta <span aria-hidden>↗</span>
+                </a>
+              )}
+            </div>
             <div className="flex gap-2 flex-wrap">
               <button onClick={() => setCategoryFilter('todas')}
                 className="px-3 py-2 rounded-xl text-xs font-bold transition-all"

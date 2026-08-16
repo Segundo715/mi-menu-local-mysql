@@ -185,14 +185,12 @@ export default function AdminConfiguracionPage() {
 
         <div className="pt-1">
           <h1 className="text-xl font-black" style={{ color: S.text }}>Configuración</h1>
-          <p className="text-xs mt-0.5" style={{ color: S.sub }}>Textos, colores, logos y módulos del sistema</p>
         </div>
 
         {/* ===== Identidad del restaurante ===== */}
         <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: S.card, border: `1px solid ${S.border}` }}>
           <div className="px-5 py-4" style={{ borderBottom: `1px solid ${S.border}` }}>
             <p className="font-bold text-sm" style={{ color: S.text }}>Identidad del restaurante</p>
-            <p className="text-xs mt-0.5" style={{ color: S.sub }}>Nombre, logo y colores — se aplica a todos los paneles (admin, empleados, RESTA3) y al menú del cliente</p>
           </div>
           <div className="p-5 space-y-5">
 
@@ -207,7 +205,6 @@ export default function AdminConfiguracionPage() {
                   style={{ backgroundColor: S.bg, color: S.text, border: `1px solid ${S.border}` }} />
                 {renderSaveBtn('restaurant_name')}
               </div>
-              <p className="text-xs mt-1" style={{ color: S.sub }}>Se muestra en el menú lateral del panel</p>
             </div>
 
             {/* Logo menú */}
@@ -226,14 +223,12 @@ export default function AdminConfiguracionPage() {
                     onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogo(f, 'menu_logo', setUploadingMenuLogo) }} />
                 </label>
               </div>
-              <p className="text-xs mt-1" style={{ color: S.sub }}>Aparece en el sidebar de admin/empleados/RESTA3 y en la barra superior y el carrito del menú del cliente</p>
             </div>
 
             {/* Color del logo */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wide mb-1" style={{ color: S.sub }}>Recolorear logo (si tiene negro u otro color)</label>
               {renderColorRow('menu_logo_color', values.menu_logo_color || '#B90F45')}
-              <p className="text-xs mt-1" style={{ color: S.sub }}>Reemplaza todo el logo por un solo tono, usando su forma como silueta. Funciona con logos de fondo transparente (PNG/WebP/SVG); no aplica a fotos o JPG. Déjalo vacío para conservar los colores originales.</p>
             </div>
 
             {/* Tamaño del logo en el menú del cliente */}
@@ -249,7 +244,6 @@ export default function AdminConfiguracionPage() {
                 </span>
                 {renderSaveBtn('menu_logo_size')}
               </div>
-              <p className="text-xs mt-1" style={{ color: S.sub }}>Ancho máximo del logo grande que se muestra arriba del menú del cliente</p>
             </div>
 
             {/* Fondo */}
@@ -280,9 +274,6 @@ export default function AdminConfiguracionPage() {
             <div>
               <label className="block text-xs font-bold uppercase tracking-wide mb-1" style={{ color: S.sub }}>Color de acción (carrito / agregar)</label>
               {renderColorRow('menu_action_color', values.menu_action_color || values.menu_hover_color || '#DC5E86')}
-              <p className="text-xs mt-1" style={{ color: S.sub }}>
-                Color del carrito flotante, &quot;Agregar al Pedido&quot; y los botones +/-. Si se deja vacío, usa el color de acento.
-              </p>
             </div>
 
             {/* WhatsApp del negocio */}
@@ -296,7 +287,6 @@ export default function AdminConfiguracionPage() {
                   style={{ backgroundColor: S.bg, color: S.text, border: `1px solid ${S.border}` }} />
                 {renderSaveBtn('business_wa')}
               </div>
-              <p className="text-xs mt-1" style={{ color: S.sub }}>Número sin + ni espacios (ej. 526641234567). Los pedidos del menú se envían aquí por WhatsApp.</p>
             </div>
 
             {/* Dirección */}
@@ -310,7 +300,6 @@ export default function AdminConfiguracionPage() {
                   style={{ backgroundColor: S.bg, color: S.text, border: `1px solid ${S.border}` }} />
                 {renderSaveBtn('restaurant_address')}
               </div>
-              <p className="text-xs mt-1" style={{ color: S.sub }}>Se imprime en los tickets de pedido</p>
             </div>
 
             {/* Teléfono */}
@@ -324,7 +313,6 @@ export default function AdminConfiguracionPage() {
                   style={{ backgroundColor: S.bg, color: S.text, border: `1px solid ${S.border}` }} />
                 {renderSaveBtn('restaurant_phone')}
               </div>
-              <p className="text-xs mt-1" style={{ color: S.sub }}>Se imprime en los tickets de pedido</p>
             </div>
 
           </div>
@@ -334,7 +322,6 @@ export default function AdminConfiguracionPage() {
         <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: S.card, border: `1px solid ${S.border}` }}>
           <div className="px-5 py-4" style={{ borderBottom: `1px solid ${S.border}` }}>
             <p className="font-bold text-sm" style={{ color: S.text }}>Administración de perfiles</p>
-            <p className="text-xs mt-0.5" style={{ color: S.sub }}>Usuarios con acceso al panel /admin</p>
           </div>
           <div className="p-5 space-y-4">
 
@@ -409,9 +396,6 @@ export default function AdminConfiguracionPage() {
                     Nueva
                   </button>
                 </div>
-                <p className="text-xs" style={{ color: S.sub }}>
-                  Copia la contraseña antes de crear el perfil — no se puede recuperar después.
-                </p>
               </div>
 
               <button onClick={createProfile} disabled={creating || !newName.trim() || !newPass}
