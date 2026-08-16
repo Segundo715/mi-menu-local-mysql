@@ -688,33 +688,55 @@ export default function AdminTarjetasPage() {
         {/* Filtrar por categoría */}
         {categories.length > 0 && (
           <div>
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-              <p className="text-xs font-semibold" style={{ color: S.sub }}>Filtrar por categoría</p>
-              {categoryFilter !== 'todas' && CARD_URLS[categoryFilter] && (
-                <a href={CARD_URLS[categoryFilter]} target="_blank" rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
-                  style={{ backgroundColor: S.bg, color: S.accent, border: `1px solid ${S.accent}` }}>
-                  Ver tarjeta <span aria-hidden>↗</span>
-                </a>
-              )}
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <button onClick={() => setCategoryFilter('todas')}
-                className="px-3 py-2 rounded-xl text-xs font-bold transition-all"
-                style={categoryFilter === 'todas'
-                  ? { backgroundColor: S.accent, color: '#000' }
-                  : { backgroundColor: S.card, color: S.sub, border: `1px solid ${S.border}` }}>
-                Todas las categorías
-              </button>
-              {categories.map(cat => (
-                <button key={cat.id} onClick={() => setCategoryFilter(cat.id)}
-                  className="px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
-                  style={categoryFilter === cat.id
-                    ? { backgroundColor: cat.color, color: '#000' }
-                    : { backgroundColor: S.card, color: S.sub, border: `1px solid ${S.border}` }}>
-                  <RewardIcon name={cat.icon} size={13} /> {cat.name}
-                </button>
-              ))}
+            <p className="text-xs font-semibold mb-1.5" style={{ color: S.sub }}>Filtrar por categoría</p>
+            <button onClick={() => setCategoryFilter('todas')}
+              className="px-3 py-2 rounded-xl text-xs font-bold transition-all mb-2"
+              style={categoryFilter === 'todas'
+                ? { backgroundColor: S.accent, color: '#000' }
+                : { backgroundColor: S.card, color: S.sub, border: `1px solid ${S.border}` }}>
+              Todas las categorías
+            </button>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              {categories.map(cat => {
+                const activeCount = cards.filter(c => (c.cardType ?? 'cafe') === cat.id && c.active).length
+                const selected = categoryFilter === cat.id
+                return (
+                  <div key={cat.id} className="rounded-2xl p-3 transition-all"
+                    style={selected
+                      ? { backgroundColor: cat.color, border: `1px solid ${cat.color}` }
+                      : { backgroundColor: S.card, border: `1px solid ${S.border}` }}>
+                    <button onClick={() => setCategoryFilter(cat.id)} className="w-full flex items-center gap-2 text-left mb-2">
+                      <RewardIcon name={cat.icon} size={16} />
+                      <span className="text-sm font-bold flex-1 truncate" style={{ color: selected ? '#000' : S.text }}>{cat.name}</span>
+                    </button>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ backgroundColor: activeCount > 0 ? '#4ade80' : (selected ? 'rgba(0,0,0,.35)' : S.sub) }} />
+                      <span className="text-xs" style={{ color: selected ? 'rgba(0,0,0,.65)' : S.sub }}>
+                        {activeCount > 0 ? `${activeCount} activa${activeCount !== 1 ? 's' : ''}` : 'Sin tarjetas activas'}
+                      </span>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <button onClick={() => { setCatsOpen(true); selectCategory(cat) }}
+                        className="flex-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-all"
+                        style={selected
+                          ? { backgroundColor: 'rgba(0,0,0,.15)', color: '#000' }
+                          : { backgroundColor: S.bg, color: S.sub, border: `1px solid ${S.border}` }}>
+                        Formulario
+                      </button>
+                      {CARD_URLS[cat.id] && (
+                        <a href={CARD_URLS[cat.id]} target="_blank" rel="noopener noreferrer"
+                          className="flex-1 px-2 py-1.5 rounded-lg text-xs font-bold text-center transition-all"
+                          style={selected
+                            ? { backgroundColor: 'rgba(0,0,0,.15)', color: '#000' }
+                            : { backgroundColor: S.bg, color: S.accent, border: `1px solid ${S.accent}` }}>
+                          Tarjeta ↗
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
