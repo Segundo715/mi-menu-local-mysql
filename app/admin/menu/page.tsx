@@ -143,7 +143,7 @@ export default function AdminMenuPage() {
           style={{ backgroundColor: S.bg, color: S.text, border: `1px solid ${S.border}` }} />
         <button onClick={() => saveColor(key, value)} disabled={savingKey === key}
           className="px-4 py-2 rounded-2xl text-sm font-bold shrink-0"
-          style={{ backgroundColor: savedKey === key ? 'rgba(0,230,118,.2)' : `${S.accent}22`, color: savedKey === key ? '#4ade80' : contrastText(accentHex) }}>
+          style={{ backgroundColor: savedKey === key ? 'rgba(0,230,118,.2)' : `${S.accent}22`, color: savedKey === key ? '#4ade80' : S.text }}>
           {savingKey === key ? '...' : savedKey === key ? <Icon name="check" size={15} /> : 'Guardar'}
         </button>
       </div>
@@ -293,7 +293,7 @@ export default function AdminMenuPage() {
                         <div className="flex gap-2">
                           <button onClick={() => openEdit(p)}
                             className="px-3 py-1 rounded-lg text-xs font-bold"
-                            style={{ backgroundColor: `${S.accent}20`, color: contrastText(accentHex) }}>Editar</button>
+                            style={{ backgroundColor: `${S.accent}20`, color: S.text }}>Editar</button>
                           <button onClick={() => remove(p.id)}
                             className="px-3 py-1 rounded-lg text-xs font-bold"
                             style={{ backgroundColor: 'rgba(239,68,68,.12)', color: '#f87171' }}>Eliminar</button>

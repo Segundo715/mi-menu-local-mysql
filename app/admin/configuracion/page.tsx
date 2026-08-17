@@ -171,7 +171,7 @@ export default function AdminConfiguracionPage() {
       onClick={() => saveSetting(k)}
       disabled={saving === k}
       className="px-4 py-2 rounded-2xl text-sm font-bold shrink-0 transition-all"
-      style={{ backgroundColor: saved === k ? 'rgba(0,230,118,.2)' : `${S.accent}22`, color: saved === k ? '#4ade80' : contrastText(accentHex) }}>
+      style={{ backgroundColor: saved === k ? 'rgba(0,230,118,.2)' : `${S.accent}22`, color: saved === k ? '#4ade80' : S.text }}>
       {saving === k ? '...' : saved === k ? <span className="inline-flex items-center gap-1.5"><Icon name="check" size={14} /> Guardado</span> : 'Guardar'}
     </button>
   )
@@ -232,7 +232,7 @@ export default function AdminConfiguracionPage() {
                     alt="logo menú" className="w-10 h-10 object-contain" />
                 </div>
                 <label className="px-4 py-2 rounded-2xl text-sm font-bold cursor-pointer transition-all"
-                  style={{ backgroundColor: `${S.accent}22`, color: contrastText(accentHex) }}>
+                  style={{ backgroundColor: `${S.accent}22`, color: S.text }}>
                   {uploadingMenuLogo ? 'Subiendo...' : 'Cambiar logo'}
                   <input type="file" accept="image/*" className="hidden"
                     onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogo(f, 'menu_logo', setUploadingMenuLogo) }} />
@@ -356,7 +356,7 @@ export default function AdminConfiguracionPage() {
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: `${S.accent}22`, color: contrastText(accentHex) }}>
+                          style={{ backgroundColor: `${S.accent}22`, color: S.text }}>
                           {a.role || 'Administrador'}
                         </span>
                         <span className="text-xs" style={{ color: S.sub }}>Alta: {new Date(a.createdAt).toLocaleDateString()}</span>
@@ -402,12 +402,12 @@ export default function AdminConfiguracionPage() {
                   </code>
                   <button onClick={copyPassword}
                     className="px-3 py-2.5 rounded-xl text-xs font-bold shrink-0 transition-all"
-                    style={{ backgroundColor: passCopied ? 'rgba(74,222,128,.2)' : `${S.accent}22`, color: passCopied ? '#4ade80' : contrastText(accentHex) }}>
+                    style={{ backgroundColor: passCopied ? 'rgba(74,222,128,.2)' : `${S.accent}22`, color: passCopied ? '#4ade80' : S.text }}>
                     {passCopied ? '✓ Copiada' : 'Copiar'}
                   </button>
                   <button onClick={() => { setNewPass(generatePassword()); setPassCopied(false) }}
                     className="px-3 py-2.5 rounded-xl text-xs font-bold shrink-0 transition-all"
-                    style={{ backgroundColor: `${S.accent}22`, color: contrastText(accentHex) }}>
+                    style={{ backgroundColor: `${S.accent}22`, color: S.text }}>
                     Nueva
                   </button>
                 </div>
