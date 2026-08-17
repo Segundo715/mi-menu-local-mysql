@@ -2,19 +2,24 @@
 // Convierte una imagen a WebP en el navegador (Canvas API) y la sube al endpoint dado.
 // Usar solo en componentes cliente — no importar desde rutas del servidor.
 
+// Límite razonable para fotos de platillos/logos — evita subir imágenes de
+// cámara/stock de varios MB a resolución completa cuando en el sitio nunca
+// se muestran a más de unos cientos de px de ancho.
+const MAX_DIMENSION = 1200
+
 async function browserToWebp(file: File): Promise<File> {
   // SVG se rasteriza igual que los demás formatos: Supabase Storage fuerza
   // "Content-Disposition: attachment" en SVGs subidos tal cual, lo que hace
   // que el navegador los descargue en vez de mostrarlos en un <img>.
-  if (file.type === 'image/webp') return file
   return new Promise((resolve) => {
     const img = new Image()
     const url = URL.createObjectURL(file)
     img.onload = () => {
+      const scale = Math.min(1, MAX_DIMENSION / Math.max(img.naturalWidth, img.naturalHeight))
       const canvas = document.createElement('canvas')
-      canvas.width  = img.naturalWidth
-      canvas.height = img.naturalHeight
-      canvas.getContext('2d')?.drawImage(img, 0, 0)
+      canvas.width  = Math.round(img.naturalWidth * scale)
+      canvas.height = Math.round(img.naturalHeight * scale)
+      canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height)
       URL.revokeObjectURL(url)
       canvas.toBlob(
         (blob) => {
