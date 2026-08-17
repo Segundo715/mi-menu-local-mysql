@@ -63,13 +63,6 @@ export async function getCard(id: string): Promise<LoyaltyCard | undefined> {
   return doc ? toCard(doc) : undefined
 }
 
-export async function findByPhone(phone: string): Promise<LoyaltyCard | null> {
-  const clean = phone.replace(/\D/g, '')
-  const all = await (await col()).find({ restaurantId: RID }).toArray()
-  const found = all.find(d => d.phone.replace(/\D/g, '') === clean)
-  return found ? toCard(found) : null
-}
-
 export async function findOrCreate(name: string, phone: string, cardType = 'cafe', validityMonths = 3): Promise<{ card: LoyaltyCard; isNew: boolean }> {
   const clean = phone.replace(/\D/g, '')
   const all = await (await col()).find({ restaurantId: RID }).toArray()

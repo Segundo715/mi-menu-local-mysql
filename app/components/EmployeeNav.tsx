@@ -1,30 +1,15 @@
 'use client'
 
-// Sidebar del empleado: cada link puede tener un empModule que controla su visibilidad
-// según los módulos habilitados para ese empleado en la tabla employees de Supabase.
-import { useRouter } from 'next/navigation'
-import { useEffect, useState, type CSSProperties } from 'react'
+// Sidebar del empleado. /employee/menu es pública (sin login) — no hay sesión que
+// cerrar ni módulos por habilitar; el nav es un único link fijo a "Menú".
+import { useEffect, useState } from 'react'
 import AdminThemeToggle from '@/app/components/AdminThemeToggle'
 import { useBrand } from '@/app/components/BrandProvider'
 import { BrandLogo } from '@/app/components/BrandLogo'
-import type { FeatureKey } from '@/lib/features'
-
-interface NavLink {
-  href: string; icon: string; label: string; exact?: boolean; feature?: FeatureKey; empModule?: string
-}
-
-const NAV_LINKS: NavLink[] = [
-  { href: '/employee/menu',      icon: 'menu',     label: 'Menú',         exact: true },
-]
 
 const ICONS: Record<string, string> = {
-  orders:  '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
-  menu:    '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
-  loyalty: '<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
-  users:   '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
-  recipes: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
-  logout:  '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
-  flag:    '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  menu: '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
+  flag: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
 }
 
 function NavIcon({ name }: { name: string }) {
@@ -45,45 +30,20 @@ function contrastText(hex: string): string {
 }
 
 export default function EmployeeNav() {
-  const router = useRouter()
-  const [pathname, setPathname] = useState('')
   const [open, setOpen] = useState(false)
-  const [empName, setEmpName] = useState('')
   const [reportOpen, setReportOpen] = useState(false)
   const [reportMsg, setReportMsg] = useState('')
   const [reportSending, setReportSending] = useState(false)
   const [reportSent, setReportSent] = useState(false)
-  const [empPerms, setEmpPerms] = useState<Record<string, boolean>>({})
   const [subtitle, setSubtitle] = useState('Dirección General')
   const brand = useBrand()
 
   useEffect(() => {
-    queueMicrotask(() => {
-      setPathname(window.location.pathname)
-      const cookies = document.cookie.split(';')
-      const nameCookie = cookies.find(c => c.trim().startsWith('employee_name='))
-      if (nameCookie) setEmpName(decodeURIComponent(nameCookie.split('=')[1].trim()))
-    })
-    fetch('/api/permissions')
-      .then(r => r.json())
-      .then(d => setEmpPerms(d.employee ?? {}))
-      .catch(() => {})
     fetch('/api/settings?key=admin_subtitle')
       .then(r => r.json())
       .then(d => { if (d?.value) setSubtitle(d.value) })
       .catch(() => {})
   }, [])
-
-  function isEnabled(link: NavLink): boolean {
-    if (link.feature && brand.features[link.feature] === false) return false
-    if (link.empModule && empPerms[link.empModule] === false) return false
-    return true
-  }
-
-  async function logout() {
-    await fetch('/api/employee/auth', { method: 'DELETE' })
-    router.push('/employee/login')
-  }
 
   async function sendReport() {
     if (!reportMsg.trim()) return
@@ -92,7 +52,7 @@ export default function EmployeeNav() {
       const res = await fetch('/api/tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from_name: empName || 'Empleado', from_role: 'Empleado', message: reportMsg.trim() }),
+        body: JSON.stringify({ from_name: 'Empleado', from_role: 'Empleado', message: reportMsg.trim() }),
       })
       if (res.ok) {
         setReportSent(true)
@@ -103,18 +63,12 @@ export default function EmployeeNav() {
     }
   }
 
-  function isActive(href: string, exact?: boolean) {
-    if (exact) return pathname === href
-    return pathname.startsWith(href)
-  }
-
   const brandName = brand.name || 'NICHO'
   const brandLogo = brand.logo || '/logo.png'
   const logoBgStyle = brand.logoBg ? { backgroundColor: brand.logoBg } : undefined
   const accentColor = brand.accent || 'var(--ad-accent)'
   const accentText = contrastText(brand.accent)
   const navActive = { backgroundColor: accentColor, color: accentText }
-  const navVars = { '--ad-nav-hover': accentColor, '--ad-nav-hover-text': accentText } as CSSProperties
 
   const S = {
     sidebar: { backgroundColor: 'var(--ad-sidebar)', borderRight: '1px solid var(--ad-border)' },
@@ -165,20 +119,13 @@ export default function EmployeeNav() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-2.5 py-2 space-y-0.5 overflow-y-auto" style={navVars}>
-          {NAV_LINKS.map(link => {
-            const active = isActive(link.href, link.exact)
-            const enabled = isEnabled(link)
-            if (!enabled) return null
-            return (
-              <a key={link.href} href={link.href}
-                className={`ad-navlink flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all${active ? ' is-active' : ''}`}
-                style={active ? navActive : { color: 'var(--ad-sub)' }}>
-                <NavIcon name={link.icon} />
-                <span className="flex-1">{link.label}</span>
-              </a>
-            )
-          })}
+        <nav className="flex-1 px-2.5 py-2 space-y-0.5 overflow-y-auto">
+          <a href="/employee/menu"
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all"
+            style={navActive}>
+            <NavIcon name="menu" />
+            <span className="flex-1">Menú</span>
+          </a>
         </nav>
 
         {/* Footer */}
@@ -187,10 +134,10 @@ export default function EmployeeNav() {
             style={{ backgroundColor: 'var(--ad-overlay)' }}>
             <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm"
               style={{ backgroundColor: 'var(--ad-accent)', color: accentText }}>
-              {empName ? empName.charAt(0).toUpperCase() : 'E'}
+              E
             </div>
             <div>
-              <div className="text-sm font-semibold" style={S.text}>{empName || 'Empleado'}</div>
+              <div className="text-sm font-semibold" style={S.text}>Empleado</div>
               <div className="text-xs" style={S.sub}>Sesión activa</div>
             </div>
           </div>
@@ -199,12 +146,6 @@ export default function EmployeeNav() {
             style={{ color: 'var(--ad-sub)' }}>
             <NavIcon name="flag" />
             <span>Reportar problema</span>
-          </button>
-          <button type="button" onClick={logout}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all"
-            style={{ color: 'var(--ad-sub)' }}>
-            <NavIcon name="logout" />
-            <span>Cerrar sesión</span>
           </button>
         </div>
       </aside>
@@ -232,19 +173,14 @@ export default function EmployeeNav() {
               style={{ backgroundColor: 'var(--ad-overlay)', color: 'var(--ad-sub)' }}>×</button>
           </div>
 
-          <nav className="flex-1 px-2.5 py-2 space-y-0.5 overflow-y-auto" style={navVars}>
-            {NAV_LINKS.map(link => {
-              const active = isActive(link.href, link.exact)
-              return (
-                <a key={link.href} href={link.href}
-                  onClick={() => setOpen(false)}
-                  className={`ad-navlink flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium${active ? ' is-active' : ''}`}
-                  style={active ? navActive : { color: 'var(--ad-sub)' }}>
-                  <NavIcon name={link.icon} />
-                  <span className="flex-1">{link.label}</span>
-                </a>
-              )
-            })}
+          <nav className="flex-1 px-2.5 py-2 space-y-0.5 overflow-y-auto">
+            <a href="/employee/menu"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium"
+              style={navActive}>
+              <NavIcon name="menu" />
+              <span className="flex-1">Menú</span>
+            </a>
           </nav>
 
           <div className="p-3" style={{ borderTop: '1px solid var(--ad-border)' }}>
@@ -253,12 +189,6 @@ export default function EmployeeNav() {
               style={{ color: 'var(--ad-sub)' }}>
               <NavIcon name="flag" />
               <span>Reportar problema</span>
-            </button>
-            <button type="button" onClick={logout}
-              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium"
-              style={{ color: 'var(--ad-sub)' }}>
-              <NavIcon name="logout" />
-              <span>Cerrar sesión</span>
             </button>
           </div>
         </aside>

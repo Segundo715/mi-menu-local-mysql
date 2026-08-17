@@ -77,10 +77,6 @@ export async function getEmployeeById(id: string): Promise<EmployeeUser | undefi
   return doc ? toEmployee(doc) : undefined
 }
 
-export async function countEmployees(): Promise<number> {
-  return (await col()).countDocuments({ restaurantId: RID })
-}
-
 export async function deleteEmployee(id: string): Promise<void> {
   await (await col()).deleteOne({ _id: id })
 }

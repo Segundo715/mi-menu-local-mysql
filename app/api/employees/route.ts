@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { verifySession } from '@/lib/auth'
-import { listEmployees, createEmployee, deleteEmployee, countEmployees, getEmployeeById } from '@/lib/employeeDb'
+import { listEmployees, createEmployee, deleteEmployee, getEmployeeById } from '@/lib/employeeDb'
 
 export async function GET(req: NextRequest) {
   if (!verifySession(req.cookies.get('admin_session')?.value))

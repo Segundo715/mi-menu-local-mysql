@@ -1,32 +1,17 @@
 'use client'
 
-// Sidebar de RESTA3. Usa BrandProvider (vía useBrand) para mostrar el logo
-// y nombre del restaurante igual que el admin. Mismas CSS vars --ad-* para tema coherente.
+// Sidebar de RESTA3. /resta3/menu es pública (sin login) — no hay sesión que
+// cerrar ni módulos por habilitar; el nav es un único link fijo a "Menú".
+// Usa BrandProvider (vía useBrand) para mostrar el logo y nombre del restaurante
+// igual que el admin. Mismas CSS vars --ad-* para tema coherente.
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import AdminThemeToggle from '@/app/components/AdminThemeToggle'
 import { useBrand } from '@/app/components/BrandProvider'
 import { BrandLogo } from '@/app/components/BrandLogo'
 
-const LINKS = [
-  { href: '/resta3/menu',       icon: 'menu',       label: 'Menú', exact: true },
-]
-
 const ICONS: Record<string, string> = {
-  dashboard:  '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
-  tpv:        '<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
-  menu:       '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
-  tv:         '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
-  mesas:      '<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>',
-  cocina:     '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
-  domicilios: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
-  inventario: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
-  compras:    '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
-  empleados:  '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
-  reportes:   '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
-  corte:      '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><path d="M7 15h.01M11 15h2"/>',
-  logout:     '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
-  flag:       '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  menu: '<path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>',
+  flag: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
 }
 
 function NavIcon({ name }: { name: string }) {
@@ -35,13 +20,6 @@ function NavIcon({ name }: { name: string }) {
       strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
       dangerouslySetInnerHTML={{ __html: ICONS[name] ?? '' }} />
   )
-}
-
-const LINK_FEATURE: Record<string, string> = {
-  dashboard: 'r3_dashboard',
-  tpv: 'r3_tpv', mesas: 'r3_mesas', cocina: 'r3_cocina',
-  inventario: 'r3_inventario', compras: 'r3_compras',
-  empleados: 'r3_empleados', reportes: 'r3_reportes',
 }
 
 function contrastText(hex: string): string {
@@ -54,10 +32,7 @@ function contrastText(hex: string): string {
 }
 
 export default function Resta3Nav() {
-  const router = useRouter()
-  const [pathname, setPathname] = useState('')
   const [open, setOpen] = useState(false)
-  const [flags, setFlags] = useState<Record<string, boolean>>({})
   const [reportOpen, setReportOpen] = useState(false)
   const [reportMsg, setReportMsg] = useState('')
   const [reportSending, setReportSending] = useState(false)
@@ -72,26 +47,11 @@ export default function Resta3Nav() {
   const accentText = contrastText(brand.accent)
 
   useEffect(() => {
-    queueMicrotask(() => setPathname(window.location.pathname))
-    fetch('/api/resta3/features')
-      .then(r => r.json())
-      .then(d => setFlags(d))
-      .catch(() => {})
     fetch('/api/settings?key=admin_subtitle')
       .then(r => r.json())
       .then(d => { if (d?.value) setSubtitle(d.value) })
       .catch(() => {})
   }, [])
-
-  function isEnabled(icon: string): boolean {
-    const fid = LINK_FEATURE[icon]
-    return fid ? (flags[fid] ?? true) : true
-  }
-
-  async function logout() {
-    await fetch('/api/resta3/auth', { method: 'DELETE' })
-    router.push('/resta3/login')
-  }
 
   async function sendReport() {
     if (!reportMsg.trim()) return
@@ -109,10 +69,6 @@ export default function Resta3Nav() {
     } finally {
       setReportSending(false)
     }
-  }
-
-  function isActive(href: string, exact?: boolean) {
-    return exact ? pathname === href : pathname.startsWith(href)
   }
 
   const S = {
@@ -138,22 +94,13 @@ export default function Resta3Nav() {
 
       {/* Nav */}
       <nav className="flex-1 px-2.5 py-2 space-y-0.5 overflow-y-auto">
-        {LINKS.map(link => {
-          const active = isActive(link.href, link.exact)
-          const enabled = isEnabled(link.icon)
-          if (!enabled) return null
-          return (
-            <a key={link.href} href={link.href}
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all"
-              style={active
-                ? { backgroundColor: accentColor, color: accentText }
-                : { color: 'var(--ad-sub)' }}>
-              <NavIcon name={link.icon} />
-              <span className="flex-1">{link.label}</span>
-            </a>
-          )
-        })}
+        <a href="/resta3/menu"
+          onClick={() => setOpen(false)}
+          className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all"
+          style={{ backgroundColor: accentColor, color: accentText }}>
+          <NavIcon name="menu" />
+          <span className="flex-1">Menú</span>
+        </a>
       </nav>
 
       {/* Footer */}
@@ -172,12 +119,6 @@ export default function Resta3Nav() {
           style={{ color: 'var(--ad-sub)' }}>
           <NavIcon name="flag" />
           <span>Reportar problema</span>
-        </button>
-        <button onClick={logout}
-          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-sm font-medium transition-all"
-          style={{ color: 'var(--ad-sub)' }}>
-          <NavIcon name="logout" />
-          <span>Cerrar sesión</span>
         </button>
       </div>
     </div>
