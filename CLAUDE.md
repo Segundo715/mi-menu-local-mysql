@@ -38,14 +38,19 @@ Sitio de **un solo restaurante**: menú digital, tarjeta de fidelización con se
 
 ### Base de datos — MongoDB Atlas es la fuente de verdad
 
-Toda la persistencia de datos pasa por MongoDB vía `lib/mongodb.ts`, que expone `getDb(): Promise<Db>` sobre un **cliente cacheado en `global`**:
+Toda la persistencia de datos pasa por MongoDB vía `lib/mongodb.ts`, que expone `getDb(): Promise<Db>` sobre un **cliente cacheado en `global`, incondicionalmente (también en producción)**:
 
 ```ts
-const clientPromise = global.__mongoClientPromise ?? new MongoClient(uri).connect()
-if (process.env.NODE_ENV !== 'production') global.__mongoClientPromise = clientPromise
+setServers(['8.8.8.8', '1.1.1.1'])  // ver nota DNS abajo
+const clientPromise = global.__mongoClientPromise ?? new MongoClient(uri, { maxPoolSize: 5 }).connect()
+global.__mongoClientPromise = clientPromise
 ```
 
-Esto es intencional y **no se debe quitar** — mismo motivo que tenía el pool de MySQL que reemplazó (ver Notas de contexto): sin el cacheo, el hot-reload de `next dev` reabriría una conexión nueva en cada guardado de archivo.
+El cacheo en `global` es intencional y **no se debe quitar** — mismo motivo que tenía el pool de MySQL que reemplazó: sin él, el hot-reload de `next dev` reabriría una conexión nueva en cada guardado de archivo. Ya **no** está condicionado a `NODE_ENV !== 'production'` — en serverless (Vercel) cada instancia puede recibir varias invocaciones mientras esté "caliente", y cachear también ahí evita reconectar en cada una.
+
+Dos detalles más, ambos con causa raíz real (no cautela por si acaso):
+- **`maxPoolSize: 5`** — sin este límite, cada función serverless de Vercel abre hasta 100 conexiones propias (default del driver) y el tier gratuito de Atlas (M0) se satura bajo tráfico concurrente (`MongoServerSelectionError`, `ReplicaSetNoPrimary`). Diagnosticado vía `vercel logs --level error --expand`.
+- **`dns.setServers(['8.8.8.8', '1.1.1.1'])`** — en Windows, el resolutor DNS de Node a veces no puede resolver el registro SRV de `mongodb+srv://` (`ECONNREFUSED`) aunque `nslookup` del sistema sí funcione. En producción (Linux/Vercel) esto no aplica, pero el connection string en uso ya es la forma no-SRV (`mongodb://host1,host2,host3/...&replicaSet=...`) por el mismo motivo — más robusta en ambos entornos.
 
 Cada dominio tiene su módulo `lib/*Db.ts` que expone funciones async devolviendo tipos camelCase mediante un mapper `toX(doc)`. Los `_id` de todos los documentos son los mismos UUID string que ya generaba la app (`randomUUID()`) — **no se usa `ObjectId`** en ningún lado, para no tener que tocar rutas API ni frontend (que tratan `id` como string en toda la app).
 
@@ -68,7 +73,17 @@ Estos módulos son **solo de servidor** — nunca importar desde componentes cli
 
 **Migración de datos**: `scripts/migrate-mysql-to-mongo.mjs` (`npm run migrate:mongo`) copió los datos reales desde el MySQL local que usaba este proyecto antes de la migración a MongoDB. Es idempotente (upsert por `_id`), pero es un script de un solo uso — no forma parte del flujo normal de la app.
 
-**Subida de imágenes:** `app/api/{menu,settings}/upload/route.ts` aceptan multipart, suben al bucket `uploads/` de **Supabase Storage** y devuelven la URL pública. Supabase **no** almacena ninguna tabla de datos de este proyecto — es exclusivamente storage de imágenes (`lib/supabase.ts`).
+**Subida de imágenes:** `app/api/{menu,settings}/upload/route.ts` aceptan multipart, suben al bucket `uploads/` de **Supabase Storage** y devuelven la URL pública. Supabase **no** almacena ninguna tabla de datos de este proyecto — es exclusivamente storage de imágenes (`lib/supabase.ts`). Antes de subir, `lib/uploadWebp.ts` (solo cliente) reescala la imagen a un máximo de **1200px** por lado vía `<canvas>` y la convierte a WebP (calidad 0.82) — sin esto, fotos de cámara/stock de varios MB se servían a resolución completa para mostrarse a un par de cientos de px, y el menú tardaba en cargar.
+
+### Branding sin parpadeo — `BrandProvider`
+
+`app/components/BrandProvider.tsx` expone un `Context` (`useBrand()`) con `{ name, logo, logoColor, logoBg, accent, features }`. Tanto `app/layout.tsx` (para `/menu`, `/review`, `/card*`) como `app/admin/layout.tsx` (y los de `/employee`, `/resta3`) lo alimentan con `getSetting(...)` **en el servidor** y lo pasan como valor inicial. Las páginas cliente que antes tenían su propio `useState('/logo.png')`/`useState('#B90F45')` + `fetch` en un `useEffect` mostraban esos valores por defecto (el logo/color viejo, heredado del proyecto hermano "Nicho") durante un instante en cada recarga, antes de que el fetch resolviera. El patrón correcto es: `const brand = useBrand()` y usar `brand.logo`/`brand.accent`/etc. como *primer* fallback (antes del literal hardcodeado), o como valor inicial de `useState`/`useState(() => ...)` — nunca partir de un string vacío o de un asset local como estado inicial si `useBrand()` ya lo tiene disponible sin fetch.
+
+### Contraste de texto sobre el color de acento (`contrastText`)
+
+`menu_hover_color` (editable en "Color de acento / hover" de `/admin/configuracion`) controla **tanto** el acento del menú del cliente **como** `--ad-accent` de todo el panel admin (vía el `<style>` inline en `app/admin/layout.tsx`). Si un botón usa ese acento como color de texto (sólido o fondo traslúcido) sin calcular contraste, un acento muy claro u oscuro lo vuelve invisible. Varios archivos (`app/admin/{configuracion,menu,tarjetas,sellar}/page.tsx`, `app/card/*.tsx`) definen una función local `contrastText(hex)` (luminancia, umbral 0.6, retorna `#000`/`#fff`) para esto. Dos reglas al agregar un botón/badge nuevo con fondo de acento:
+- **Fondo sólido** (`backgroundColor: S.accent` o un hex literal a opacidad completa) → texto = `contrastText(accentHex)`, donde `accentHex` es el hex real (via `useBrand().accent` o el estado local que ya trackea `menu_hover_color`), nunca `S.accent` (la CSS var) como color de texto directo.
+- **Fondo traslúcido** (`` `${S.accent}22` ``, ~13-20% opacidad) → el color que realmente se percibe es el fondo del tema debajo, no el acento — usar `S.text` (`var(--ad-text)`, ya correcto por tema claro/oscuro), no `contrastText()` sobre el acento a opacidad completa.
 
 ### Autenticación — solo Admin es real
 
@@ -127,6 +142,8 @@ Ver la tabla completa con auth/notas en `CONTEXT.md`. Patrón general: `PATCH` e
 - **Dependencias npm huérfanas retiradas:** `konva`, `react-konva` (eran del floor-plan de reservaciones), `lottie-react` (animaciones de TV), `pg` (nunca se usó cuando el proyecto era MySQL).
 - **2026-08-14 — Auditoría externa (Flutter):** un colaborador construyendo un cliente Flutter contra esta API auditó los contratos reales y encontró que `/card/2x1`, `/card/descuento`, `/card/premium` habían sido borradas mientras `/admin/tarjetas` seguía dejando editar esas 3 categorías completas (`reward_categories`) — se restauraron las 3 páginas (`app/card/2x1`, `app/card/descuento`, `app/card/premium`, dependen de `app/components/CustomerNav.tsx`, también restaurado) para que el editor coincida con lo que existe. También encontró y se corrigió el hueco de `GET /api/customers` (ver Seguridad arriba); el de `customers/[id]` queda pendiente, documentado.
 - **2026-08-14 — Migración de MySQL a MongoDB Atlas:** el objetivo era desplegar a Vercel, que no puede alcanzar un MySQL corriendo en `localhost`. Se evaluó contratar un MySQL en la nube (Railway/Aiven — cero cambios de código) pero se optó por MongoDB Atlas, lo que implicó reescribir los 8 `lib/*Db.ts` y el cliente de BD (`lib/mysql.ts` → `lib/mongodb.ts`). Se corrigió un leak de conexiones de MySQL en dev durante la sesión anterior (pool no sobrevivía el hot-reload) — el mismo patrón de cacheo en `global` se replicó en `lib/mongodb.ts`. Se creó `scripts/migrate-mysql-to-mongo.mjs` para copiar los datos reales una sola vez. `mysql_setup.sql` se retiró; `mongodb_setup.md` es su reemplazo.
+- **2026-08-15/17 — Despliegue real a Vercel, proyecto dedicado "pizza-luigis":** el primer deploy se hizo sin querer sobre el proyecto Vercel "mi-menu" — resultó ser un sitio real distinto (Supabase, no este código) que ya estaba en producción para otro cliente; se restauró con `vercel rollback`. El proyecto real de este cliente ("Luigi's", pizzería) es **"pizza-luigis"**, con su propia base Mongo (`pizza_luigis`, no el `mi_menu` de dev/default) — `pizza-luigis` y `mi-menu` **no deben compartir base de datos**; si algo parece "revertirse solo" al guardar, sospechar primero de una `MONGODB_URI`/`MONGODB_DB` cruzada antes que un bug de UI. `vercel project add` deja el Framework Preset en "Other" (rompe todas las rutas) si no se agrega `vercel.json` con `{"framework": "nextjs"}`.
+- **2026-08-17 — Barrido de "flash de marca anterior" y contraste de acento:** varias páginas cliente (`/admin/login`, `/review`, `/card*`, panel de Personalización de `/admin/menu`, y `/admin/configuracion` completo) cargaban su branding con `fetch` propio partiendo de `useState('/logo.png')`/placeholders literales como `"NICHO"` — mostraban el logo/nombre del proyecto hermano por un instante en cada recarga. Se introdujo `BrandProvider` (ver arriba) para eliminarlo. Por separado, se encontró y corrigió el bug de contraste descrito en la sección de `contrastText` arriba en **~20 lugares** entre `/admin/configuracion`, `/admin/menu` y `/admin/tarjetas` — varios de ellos introducidos en esta misma sesión al construir el rediseño de "Filtrar por categoría" de `/admin/tarjetas`, lo que confirma que es un patrón fácil de reintroducir por accidente: cualquier botón nuevo con fondo derivado de `menu_hover_color` necesita pasar por `contrastText()` o `S.text` según el caso.
 
 ## Restricciones importantes
 
@@ -139,3 +156,5 @@ Ver la tabla completa con auth/notas en `CONTEXT.md`. Patrón general: `PATCH` e
 - Solo servidor: `lib/*Db.ts`, `lib/auth.ts`, `lib/email.ts` — nunca importar desde componentes cliente.
 - No reintroducir código para las 5 tablas sin uso (`recipes`, `tv_slides`, `tables`, `inventory`, `birthday_registrations`) ni para rutas de login de empleado/resta3/cliente sin que el usuario lo pida explícitamente — fueron eliminadas a propósito.
 - BOM (U+FEFF): PowerShell 5.1 agrega BOM al guardar env vars en Vercel. `lib/supabase.ts` ya lo stripea con `String.fromCharCode(65279)`. Si se agrega otro cliente HTTP que lea env vars directamente, aplicar el mismo strip.
+- **Página cliente nueva que muestra logo/nombre/color del restaurante** → usar `useBrand()` (`app/components/BrandProvider.tsx`) como fuente inicial, no `useState('/logo.png')`/un placeholder literal + `fetch` en `useEffect`. Ver sección "Branding sin parpadeo" arriba.
+- **Botón/badge nuevo con fondo derivado del acento** (`S.accent`, `menu_hover_color`) → pasar el texto por `contrastText()` (fondo sólido) o usar `S.text` (fondo traslúcido tipo `` `${S.accent}22` ``). Ver sección "Contraste de texto" arriba — es fácil de olvidar al copiar un botón existente como plantilla.

@@ -1,9 +1,9 @@
 # Contexto — mi-proyecto (mi-menu-local-mysql)
 
 Este documento refleja el estado **real y verificado** del código (auditado línea por
-línea el 2026-08-14). Si algo aquí no coincide con lo que ves en `app/`, `lib/` o la
-base de datos, confía en el código — este archivo puede quedarse desactualizado si
-no se mantiene junto con los cambios.
+línea el 2026-08-14, revisado de nuevo el 2026-08-17). Si algo aquí no coincide con
+lo que ves en `app/`, `lib/` o la base de datos, confía en el código — este archivo
+puede quedarse desactualizado si no se mantiene junto con los cambios.
 
 ## ¿Qué es este proyecto?
 
@@ -28,9 +28,23 @@ código.
 | Auth | HMAC-SHA256 sin estado (`lib/auth.ts`), verificado en `proxy.ts` (Node.js runtime — en Next 16 el antiguo "middleware" se llama Proxy) |
 | Deploy | Vercel |
 
-El cliente de MongoDB (`lib/mongodb.ts`) se cachea en `global` a propósito — sin eso,
-el hot-reload de `next dev` re-ejecuta el módulo en cada guardado y abriría una
-conexión nueva en cada uno (misma lección aprendida cuando este proyecto usaba MySQL).
+El cliente de MongoDB (`lib/mongodb.ts`) se cachea en `global` a propósito, **también
+en producción** (no solo en dev) — sin eso, el hot-reload de `next dev` re-ejecuta el
+módulo en cada guardado y abriría una conexión nueva en cada uno (misma lección
+aprendida cuando este proyecto usaba MySQL), y en Vercel cada instancia serverless
+"caliente" reconectaría en cada invocación. También fija `maxPoolSize: 5` (el
+default del driver, 100, satura el tier gratuito de Atlas bajo tráfico concurrente
+serverless) y fuerza DNS públicos (`dns.setServers`) por un bug de resolución SRV de
+Node en Windows — en Linux/Vercel no aplica, pero el connection string en producción
+ya usa la forma no-SRV por la misma razón.
+
+**Branding sin parpadeo:** `app/components/BrandProvider.tsx` expone `useBrand()`
+con `{ name, logo, logoColor, logoBg, accent, features }`, poblado en el servidor
+(`getSetting(...)`) desde `app/layout.tsx` (páginas públicas) y `app/admin/layout.tsx`
+(admin/employee/resta3). Páginas cliente que muestran el logo/nombre/color del
+restaurante deben leer de ahí como valor inicial en vez de arrancar en `''`/un
+placeholder y hacer su propio `fetch` — si no, se ve el logo/nombre por defecto
+(heredado del proyecto hermano "Nicho") por un instante en cada recarga.
 
 ## Autenticación — estado real
 
@@ -176,3 +190,17 @@ NICHO_REGISTER_KEY=
 ### Admins
 - No se puede eliminar el propio perfil ni dejar la tabla en 0 admins
   (`lib/adminDb.ts` + `app/api/admins/route.ts`).
+
+### Imágenes (menú, logos)
+- `lib/uploadWebp.ts` (solo cliente) reescala a un máximo de 1200px por lado vía
+  `<canvas>` y convierte a WebP (calidad 0.82) **antes** de subir. Sin esto, una
+  foto de cámara/stock de varios MB se sirve a resolución completa para mostrarse
+  a un par de cientos de px — impacto directo en tiempo de carga de `/menu`.
+
+### Contraste de texto sobre el acento del panel admin
+- `menu_hover_color` controla a la vez el acento visual de `/menu` **y**
+  `--ad-accent` de todo `/admin/*` (vía `app/admin/layout.tsx`). Cualquier
+  botón/badge que use ese acento como color de texto debe pasar por la función
+  local `contrastText(hex)` (fondo sólido) o usar `S.text`/`var(--ad-text)`
+  (fondo traslúcido `` `${accent}NN` ``) — de lo contrario un acento muy claro
+  u oscuro deja el texto invisible. Ver `app/admin/{configuracion,menu,tarjetas,sellar}/page.tsx`.
