@@ -5,6 +5,7 @@
 // Los pedidos entregados se eliminan del localStorage automáticamente tras 30 s.
 import { useState, useEffect, useRef } from 'react'
 import { BrandLogo } from '@/app/components/BrandLogo'
+import { useBrand } from '@/app/components/BrandProvider'
 
 const FAVORITES_KEY = 'favorites'
 
@@ -60,6 +61,11 @@ function contrastTextSoft(hex: string): string {
 }
 
 export default function MenuPage() {
+  // Nombre/logo/colores ya disponibles sin fetch (layout → BrandProvider) —
+  // se usan como último fallback antes de la marca genérica, para no
+  // parpadear con el logo/color anteriores mientras el fetch de abajo
+  // (más lento, trae también colores propios de /admin/menu) resuelve.
+  const brand = useBrand()
   const [items, setItems] = useState<MenuItem[]>([])
   const [loadingMenu, setLoadingMenu] = useState(true)
   const [menuLogo, setMenuLogo] = useState('')
@@ -356,9 +362,9 @@ export default function MenuPage() {
   }
   const categories = Object.keys(grouped)
 
-  const logo = menuLogo || profileLogo || '/logo.png'
-  const hoverColor = menuHover || sidebarAccent || '#B90F45'
-  const bgColor = menuBg || '#ffffff'
+  const logo = menuLogo || profileLogo || brand.logo || '/logo.png'
+  const hoverColor = menuHover || sidebarAccent || brand.accent || '#B90F45'
+  const bgColor = menuBg || brand.logoBg || '#ffffff'
   const btnColor = menuBtn || '#0d0d0d'
   // Cuarto color, solo para los controles de pedido (carrito flotante,
   // "Agregar al Pedido", botones +/-) — si no está configurado, cae al acento.

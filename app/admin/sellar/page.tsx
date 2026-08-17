@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import AdminNav from '@/app/components/AdminNav'
 import { QRScanner } from '../../components/QRScanner'
 import { Icon } from '@/app/components/Icon'
+import { useBrand } from '@/app/components/BrandProvider'
 
 const QRCode = dynamic(() => import('react-qr-code'), { ssr: false })
 
@@ -52,20 +53,18 @@ export default function AdminSellarPage() {
   const [scanError, setScanError] = useState('')
   const [phoneSearch, setPhoneSearch] = useState('')
   const [searching, setSearching] = useState(false)
-  const [accentHex, setAccentHex] = useState('#B90F45')
   const scanKey = useRef(0)
+  // El accent ya llega sin parpadeo desde el servidor (layout → BrandProvider) —
+  // fetch propio aquí solo duplicaba la llamada y mostraba el color por defecto un instante.
+  // contrastText() necesita un #RRGGBB literal, no la var CSS, de ahí el fallback en hex.
+  const accentHex = useBrand().accent || '#B90F45'
 
   useEffect(() => {
     queueMicrotask(() => setOrigin(window.location.origin))
     queueMicrotask(loadCustomers)
     queueMicrotask(loadLoyaltyPending)
-    fetch('/api/settings?key=menu_hover_color').then(r => r.json()).then(d => {
-      if (d?.value) { setAccentHex(d.value); return }
-      fetch('/api/settings?key=sidebar_accent').then(r => r.json()).then(d2 => { if (d2?.value) setAccentHex(d2.value) }).catch(() => {})
-    }).catch(() => {})
     const poll = setInterval(() => { loadCustomers(); loadLoyaltyPending() }, 8000)
     return () => clearInterval(poll)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const accentText = contrastText(accentHex)

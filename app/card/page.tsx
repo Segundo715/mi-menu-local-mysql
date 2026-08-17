@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { RewardIcon } from '@/app/components/RewardIcon'
 import { BrandLogo } from '@/app/components/BrandLogo'
+import { useBrand } from '@/app/components/BrandProvider'
 
 const QRCode = dynamic(() => import('react-qr-code'), { ssr: false })
 
@@ -42,9 +43,19 @@ function contrastTextSoft(hex: string): string {
 type Step = 'loading' | 'form' | 'waiting' | 'card'
 
 export default function CardPage() {
+  // Nombre/logo/acento ya disponibles sin fetch (layout → BrandProvider) —
+  // se usan como semilla inicial para no mostrar el logo/color anteriores
+  // mientras el fetch de la categoría (más lento) todavía no resuelve.
+  const brand = useBrand()
   const [step, setStep] = useState<Step>('loading')
   const [customer, setCustomer] = useState<Customer | null>(null)
-  const [cfg, setCfg] = useState<CafeConfig>(DEFAULT_CAFE)
+  const [cfg, setCfg] = useState<CafeConfig>(() => ({
+    ...DEFAULT_CAFE,
+    logo: brand.logo || DEFAULT_CAFE.logo,
+    logoColor: brand.logoColor || DEFAULT_CAFE.logoColor,
+    color: brand.accent || DEFAULT_CAFE.color,
+    brandText: brand.name || DEFAULT_CAFE.brandText,
+  }))
   const [flipped, setFlipped] = useState(false)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -85,10 +96,10 @@ export default function CardPage() {
       fetch('/api/settings?key=menu_bg_color').then(r => r.json()).catch(() => ({})),
       fetch('/api/settings?key=menu_btn_color').then(r => r.json()).catch(() => ({})),
     ]).then(([catRes, nameRes, logoRes, pLogoRes, logoColorRes, hoverRes, accentRes, bgRes, btnRes]) => {
-      const brandName = nameRes?.value || DEFAULT_CAFE.brandText
-      const brandLogoUrl = logoRes?.value || pLogoRes?.value || ''
-      const brandLogoColor = logoColorRes?.value || ''
-      const brandAccent = hoverRes?.value || accentRes?.value || DEFAULT_CAFE.color
+      const brandName = nameRes?.value || brand.name || DEFAULT_CAFE.brandText
+      const brandLogoUrl = logoRes?.value || pLogoRes?.value || brand.logo || ''
+      const brandLogoColor = logoColorRes?.value || brand.logoColor || ''
+      const brandAccent = hoverRes?.value || accentRes?.value || brand.accent || DEFAULT_CAFE.color
       if (bgRes?.value) setBgColor(bgRes.value)
       if (btnRes?.value) setBtnColor(btnRes.value)
 
@@ -114,7 +125,7 @@ export default function CardPage() {
         brandLogo: cafe?.brandLogo || DEFAULT_CAFE.brandLogo,
       })
     })
-  }, [])
+  }, [brand.logo, brand.logoColor, brand.accent, brand.name])
 
   // Pantalla de espera — pollea hasta que el admin active la tarjeta
   useEffect(() => {

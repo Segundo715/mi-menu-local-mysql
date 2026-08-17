@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import CustomerNav from '@/app/components/CustomerNav'
 import { RewardIcon } from '@/app/components/RewardIcon'
 import { BrandLogo } from '@/app/components/BrandLogo'
+import { useBrand } from '@/app/components/BrandProvider'
 
 const QRCode = dynamic(() => import('react-qr-code'), { ssr: false })
 
@@ -33,13 +34,22 @@ interface Customer {
 type Step = 'form' | 'card'
 
 export default function Card2x1Page() {
+  // Nombre/logo de marca ya disponibles sin fetch (layout → BrandProvider) —
+  // se usan como semilla inicial para no mostrar el logo/nombre anteriores
+  // mientras el fetch de la categoría (más lento) todavía no resuelve.
+  const brand = useBrand()
   const [step, setStep] = useState<Step>('form')
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [cfg, setCfg] = useState<PromoConfig>(DEFAULT_2X1)
+  const [cfg, setCfg] = useState<PromoConfig>(() => ({
+    ...DEFAULT_2X1,
+    logo: brand.logo || DEFAULT_2X1.logo,
+    logoColor: brand.logoColor || DEFAULT_2X1.logoColor,
+    brandText: brand.name || DEFAULT_2X1.brandText,
+  }))
   const [flipped, setFlipped] = useState(false)
 
   useEffect(() => {
@@ -60,9 +70,9 @@ export default function Card2x1Page() {
       fetch('/api/settings?key=profile_logo').then(r => r.json()).catch(() => ({})),
       fetch('/api/settings?key=menu_logo_color').then(r => r.json()).catch(() => ({})),
     ]).then(([catRes, nameRes, logoRes, pLogoRes, logoColorRes]) => {
-      const brandName = nameRes?.value || DEFAULT_2X1.brandText
-      const brandLogoUrl = logoRes?.value || pLogoRes?.value || DEFAULT_2X1.logo
-      const brandLogoColor = logoColorRes?.value || ''
+      const brandName = nameRes?.value || brand.name || DEFAULT_2X1.brandText
+      const brandLogoUrl = logoRes?.value || pLogoRes?.value || brand.logo || DEFAULT_2X1.logo
+      const brandLogoColor = logoColorRes?.value || brand.logoColor || ''
 
       let promo: (PromoConfig & { id: string }) | null = null
       if (catRes?.value) {
@@ -85,7 +95,7 @@ export default function Card2x1Page() {
         brandLogo: promo?.brandLogo || DEFAULT_2X1.brandLogo,
       })
     })
-  }, [])
+  }, [brand.logo, brand.logoColor, brand.name])
 
   async function handleSubmit() {
     if (!name.trim() || !phone.trim()) { setError('Completa todos los campos'); return }

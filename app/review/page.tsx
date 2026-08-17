@@ -4,6 +4,7 @@
 // admin (/admin/reviews) — este formulario no muestra ninguna reseña.
 import { useState, useEffect } from 'react'
 import { BrandLogo } from '@/app/components/BrandLogo'
+import { useBrand } from '@/app/components/BrandProvider'
 
 const RATING_LABELS = ['', 'Muy malo', 'Malo', 'Regular', 'Bueno', 'Excelente']
 const RATING_COLORS = ['', 'text-red-400', 'text-orange-400', 'text-yellow-400', 'text-green-400', 'text-emerald-400']
@@ -56,12 +57,16 @@ export default function ReviewPage() {
   const [reviewError, setReviewError] = useState('')
   const [reviewSuccess, setReviewSuccess] = useState(false)
 
-  const [accent, setAccent] = useState('#B90F45')
+  // Nombre/logo/acento ya disponibles sin fetch (layout → BrandProvider) —
+  // se usan como semilla inicial para no mostrar el logo/color anteriores
+  // mientras el fetch de abajo (más lento) todavía no resuelve.
+  const brand = useBrand()
+  const [accent, setAccent] = useState(() => brand.accent || '#B90F45')
   const [bgColor, setBgColor] = useState('#000000')
   const [btnColor, setBtnColor] = useState('#0d0d0d')
-  const [logo, setLogo] = useState('/logo.png')
-  const [logoColor, setLogoColor] = useState('')
-  const [brandName, setBrandName] = useState('Restaurante')
+  const [logo, setLogo] = useState(() => brand.logo || '/logo.png')
+  const [logoColor, setLogoColor] = useState(() => brand.logoColor || '')
+  const [brandName, setBrandName] = useState(() => brand.name || 'Restaurante')
 
   useEffect(() => {
     Promise.all([
@@ -122,7 +127,6 @@ export default function ReviewPage() {
       {/* Header */}
       <div className="sticky top-0 z-20 shadow-lg" style={{ backgroundColor: bgColor, borderBottom: `1px solid ${accent}` }}>
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <BrandLogo src={logo} color={logoColor} alt={brandName} className="h-9 w-auto" />
           <h1 className="font-black text-base tracking-tight" style={{ color: bgText }}>Reseñas</h1>
         </div>

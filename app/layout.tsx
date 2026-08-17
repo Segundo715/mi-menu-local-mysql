@@ -3,7 +3,9 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import FeatureGuard from "@/app/components/FeatureGuard";
+import BrandProvider from "@/app/components/BrandProvider";
 import { getSetting } from "@/lib/settingsDb";
+import { getFeatureFlags } from "@/lib/features";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -42,12 +44,23 @@ export default async function RootLayout({
   // /recetas, /registro, /tv, etc. Sin esto, cualquier CSS que use
   // var(--ad-accent, #B90F45) — como el scrollbar de globals.css — cae al
   // guinda fijo en vez del acento configurado en "Identidad del restaurante".
-  const [menuHover, sidebarAccent] = await Promise.all([
+  // También se prefetchan nombre/logo/colores para pasarlos a BrandProvider:
+  // /menu, /review y /card* los usan como valor inicial (en vez de un string
+  // vacío o '/logo.png' hardcodeado) para no mostrar la marca anterior un
+  // instante mientras su propio fetch client-side todavía no resuelve.
+  const [menuHover, sidebarAccent, name, menuLogo, profileLogo, logoColor, logoBg, features] = await Promise.all([
     getSetting('menu_hover_color'),
     getSetting('sidebar_accent'),
+    getSetting('restaurant_name'),
+    getSetting('menu_logo'),
+    getSetting('profile_logo'),
+    getSetting('menu_logo_color'),
+    getSetting('menu_bg_color'),
+    getFeatureFlags(),
   ])
   const accent = menuHover || sidebarAccent || '#B90F45'
   const accentCss = /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : '#B90F45'
+  const logo = menuLogo || profileLogo
 
   return (
     <html
@@ -71,7 +84,10 @@ export default async function RootLayout({
         data-enable-grammarly="false"
         spellCheck="false"
       >
-        <FeatureGuard />{children}
+        <FeatureGuard />
+        <BrandProvider value={{ name, logo, logoColor, logoBg, accent, features }}>
+          {children}
+        </BrandProvider>
       </body>
     </html>
   );
