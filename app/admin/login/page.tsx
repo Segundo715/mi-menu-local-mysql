@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { BrandLogo } from '@/app/components/BrandLogo'
+import { useBrand } from '@/app/components/BrandProvider'
 
 const STORAGE_KEY = 'admin_remembered_name'
 
@@ -10,21 +11,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
-  const [logo, setLogo]         = useState('/logo.png')
-  const [logoColor, setLogoColor] = useState('')
-  const [logoBg, setLogoBg]     = useState('')
-  const [brandName, setBrandName] = useState('Restaurante')
+  const [showPassword, setShowPassword] = useState(false)
+  // Nombre/logo/colores vienen del servidor (layout → BrandProvider) — sin
+  // fetch propio no hay parpadeo de la marca anterior al recargar la página.
+  const { name: brandNameRaw, logo: brandLogo, logoColor, logoBg } = useBrand()
+  const logo = brandLogo || '/logo.png'
+  const brandName = brandNameRaw || 'Restaurante'
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) queueMicrotask(() => setName(saved))
-    fetch('/api/settings?key=menu_logo').then(r => r.json()).then(d => {
-      if (d?.value) { setLogo(d.value); return }
-      fetch('/api/settings?key=profile_logo').then(r => r.json()).then(d2 => { if (d2?.value) setLogo(d2.value) }).catch(() => {})
-    }).catch(() => {})
-    fetch('/api/settings?key=menu_logo_color').then(r => r.json()).then(d => setLogoColor(d?.value ?? '')).catch(() => {})
-    fetch('/api/settings?key=menu_bg_color').then(r => r.json()).then(d => { if (d?.value) setLogoBg(d.value) }).catch(() => {})
-    fetch('/api/settings?key=restaurant_name').then(r => r.json()).then(d => { if (d?.value) setBrandName(d.value) }).catch(() => {})
   }, [])
 
   const INPUT = 'w-full rounded-2xl px-4 py-3.5 text-white text-sm transition-colors focus:outline-none'
@@ -79,11 +75,32 @@ export default function LoginPage() {
           </div>
           <div>
             <label className="block text-xs font-bold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--ad-sub)' }}>Contraseña</label>
-            <input id="admin-password" name="password" type="password" value={password} onChange={e => { setPassword(e.target.value); setError('') }}
-              placeholder="Contraseña" autoComplete="current-password"
-              className={INPUT} style={inputStyle}
-              onFocus={e => e.currentTarget.style.borderColor = 'var(--ad-accent)'}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(0,230,118,0.3)'} />
+            <div className="relative">
+              <input id="admin-password" name="password" type={showPassword ? 'text' : 'password'} value={password}
+                onChange={e => { setPassword(e.target.value); setError('') }}
+                placeholder="Contraseña" autoComplete="current-password"
+                className={`${INPUT} pr-11`} style={inputStyle}
+                onFocus={e => e.currentTarget.style.borderColor = 'var(--ad-accent)'}
+                onBlur={e => e.currentTarget.style.borderColor = 'rgba(0,230,118,0.3)'} />
+              <button type="button" onClick={() => setShowPassword(v => !v)}
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center justify-center"
+                style={{ color: 'var(--ad-sub)' }}>
+                {showPassword ? (
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.6 18.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           {error && (
