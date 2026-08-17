@@ -7,10 +7,22 @@ import AdminNav from '@/app/components/AdminNav'
 import { Icon } from '@/app/components/Icon'
 import { RewardIcon, REWARD_ICON_KEYS, isCustomIcon } from '@/app/components/RewardIcon'
 import { uploadWebp } from '@/lib/uploadWebp'
+import { useBrand } from '@/app/components/BrandProvider'
 
 const S = {
   bg: 'var(--ad-bg)', card: 'var(--ad-card)', accent: 'var(--ad-accent)',
   text: 'var(--ad-text)', sub: 'var(--ad-sub)', border: 'var(--ad-border)',
+}
+
+// Texto negro o blanco según la luminancia del fondo, para que ningún botón
+// con fondo de acento o de color de categoría quede con texto invisible.
+function contrastText(hex: string): string {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex)
+  if (!m) return '#000'
+  const n = parseInt(m[1], 16)
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return lum > 0.6 ? '#000' : '#fff'
 }
 
 interface LoyaltyCard {
@@ -76,6 +88,10 @@ function timeAgo(days: number) {
 }
 
 export default function AdminTarjetasPage() {
+  // Hex real detrás de --ad-accent — se usa para calcular texto legible en
+  // botones con fondo de acento sólido, en vez de asumir que siempre es oscuro.
+  const brandAccent = useBrand().accent
+  const accentHex = /^#[0-9a-fA-F]{6}$/.test(brandAccent) ? brandAccent : '#B90F45'
   const [cards, setCards] = useState<LoyaltyCard[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'todas' | 'activas' | 'inactivas' | 'vencidas'>('todas')
@@ -304,7 +320,7 @@ export default function AdminTarjetasPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Total', value: stats.total, color: S.accent },
+            { label: 'Total', value: stats.total, color: S.text },
             { label: 'Activas', value: stats.activas, color: '#4ade80' },
             { label: 'Inactivas', value: stats.inactivas, color: '#f87171' },
             { label: 'Vencidas', value: stats.vencidas, color: '#fb923c' },
@@ -355,14 +371,14 @@ export default function AdminTarjetasPage() {
             <button onClick={newCategory}
               className="px-4 py-2.5 rounded-2xl text-sm font-bold transition-all"
               style={activeId === null
-                ? { backgroundColor: S.accent, color: '#000' }
-                : { backgroundColor: S.bg, color: S.accent, border: `1px dashed ${S.accent}` }}>
+                ? { backgroundColor: S.accent, color: contrastText(accentHex) }
+                : { backgroundColor: `${S.accent}15`, color: S.text, border: `1px dashed ${S.accent}` }}>
               + Nueva
             </button>
             {activeId && CARD_URLS[activeId] && (
               <a href={CARD_URLS[activeId]} target="_blank" rel="noopener noreferrer"
                 className="ml-auto px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
-                style={{ backgroundColor: S.bg, color: S.accent, border: `1px solid ${S.accent}` }}>
+                style={{ backgroundColor: `${S.accent}15`, color: S.text, border: `1px solid ${S.accent}` }}>
                 Ver tarjeta <span aria-hidden>↗</span>
               </a>
             )}
@@ -373,7 +389,7 @@ export default function AdminTarjetasPage() {
             <div className="px-5 pt-3">
               <p className="text-xs" style={{ color: S.sub }}>
                 {CARD_URLS[activeId]
-                  ? <>Esta tarjeta se muestra en <span className="font-mono font-bold" style={{ color: S.accent }}>{CARD_URLS[activeId]}</span> — los cambios guardados se ven ahí.</>
+                  ? <>Esta tarjeta se muestra en <span className="font-mono font-bold" style={{ color: S.text }}>{CARD_URLS[activeId]}</span> — los cambios guardados se ven ahí.</>
                   : <>Categoría personalizada — asígnale una ruta en el código para mostrarla a clientes.</>
                 }
               </p>
@@ -473,7 +489,7 @@ export default function AdminTarjetasPage() {
                 {/* Subir ícono propio */}
                 <label title="Subir ícono propio"
                   className="w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer overflow-hidden transition-all"
-                  style={{ backgroundColor: S.bg, color: S.accent,
+                  style={{ backgroundColor: S.bg, color: S.text,
                     border: `1px ${isCustomIcon(draft.icon) ? 'solid' : 'dashed'} ${isCustomIcon(draft.icon) ? draft.color : S.accent}` }}>
                   {isCustomIcon(draft.icon)
                     ? <RewardIcon name={draft.icon} size={24} />
@@ -544,7 +560,7 @@ export default function AdminTarjetasPage() {
                     )}
                   </div>
                   <label className="px-4 py-2 rounded-2xl text-sm font-bold cursor-pointer transition-all"
-                    style={{ backgroundColor: `${S.accent}22`, color: S.accent }}>
+                    style={{ backgroundColor: `${S.accent}22`, color: S.text }}>
                     {uploading === 'logo' ? 'Subiendo...' : 'Cambiar logo'}
                     <input type="file" accept="image/*" className="hidden"
                       onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage('logo', f) }} />
@@ -565,7 +581,7 @@ export default function AdminTarjetasPage() {
                     <img src={draft.image || '/uploads/menu/SalmonBowl.jpeg'} alt="imagen" className="w-full h-full object-cover" />
                   </div>
                   <label className="px-4 py-2 rounded-2xl text-sm font-bold cursor-pointer transition-all"
-                    style={{ backgroundColor: `${S.accent}22`, color: S.accent }}>
+                    style={{ backgroundColor: `${S.accent}22`, color: S.text }}>
                     {uploading === 'image' ? 'Subiendo...' : 'Cambiar imagen'}
                     <input type="file" accept="image/*" className="hidden"
                       onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage('image', f) }} />
@@ -585,7 +601,7 @@ export default function AdminTarjetasPage() {
                     <img src={draft.brandLogo} alt="marca" className="h-7 w-auto object-contain" />
                   </div>
                   <label className="px-4 py-2 rounded-2xl text-sm font-bold cursor-pointer"
-                    style={{ backgroundColor: `${S.accent}22`, color: S.accent }}>
+                    style={{ backgroundColor: `${S.accent}22`, color: S.text }}>
                     {uploading === 'brandLogo' ? 'Subiendo...' : 'Cambiar logo'}
                     <input type="file" accept="image/*" className="hidden"
                       onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage('brandLogo', f) }} />
@@ -598,12 +614,12 @@ export default function AdminTarjetasPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <input type="text" value={draft.brandText || ''}
                     onChange={e => setDraft(d => ({ ...d, brandText: e.target.value }))}
-                    placeholder="NICHO"
+                    placeholder="Mi Restaurante"
                     className="flex-1 min-w-[160px] px-4 py-3 rounded-2xl text-sm outline-none"
                     style={{ backgroundColor: S.bg, color: S.text, border: `1px solid ${S.border}` }} />
                   <span className="text-xs" style={{ color: S.sub }}>o</span>
                   <label className="px-4 py-2 rounded-2xl text-sm font-bold cursor-pointer"
-                    style={{ backgroundColor: `${S.accent}22`, color: S.accent }}>
+                    style={{ backgroundColor: `${S.accent}22`, color: S.text }}>
                     {uploading === 'brandLogo' ? 'Subiendo...' : 'Subir logo de marca'}
                     <input type="file" accept="image/*" className="hidden"
                       onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage('brandLogo', f) }} />
@@ -638,7 +654,7 @@ export default function AdminTarjetasPage() {
               <button onClick={saveCategory}
                 disabled={!draft.name.trim() || !draft.reward.trim() || savingCats}
                 className="px-4 py-2 rounded-2xl text-sm font-bold transition-all disabled:opacity-40"
-                style={{ backgroundColor: S.accent, color: '#000' }}>
+                style={{ backgroundColor: S.accent, color: contrastText(accentHex) }}>
                 {savingCats ? 'Guardando…' : activeId ? 'Guardar cambios' : '+ Crear categoría'}
               </button>
               {activeId && (
@@ -699,7 +715,7 @@ export default function AdminTarjetasPage() {
             <button onClick={() => setCategoryFilter('todas')}
               className="px-3 py-2 rounded-xl text-xs font-bold transition-all mb-2"
               style={categoryFilter === 'todas'
-                ? { backgroundColor: S.accent, color: '#000' }
+                ? { backgroundColor: S.accent, color: contrastText(accentHex) }
                 : { backgroundColor: S.card, color: S.sub, border: `1px solid ${S.border}` }}>
               Todas las categorías
             </button>
@@ -707,6 +723,9 @@ export default function AdminTarjetasPage() {
               {categories.map(cat => {
                 const activeCount = cards.filter(c => (c.cardType ?? 'cafe') === cat.id && c.active).length
                 const selected = categoryFilter === cat.id
+                const catText = contrastText(cat.color)
+                const catTextSoft = catText === '#000' ? 'rgba(0,0,0,.65)' : 'rgba(255,255,255,.75)'
+                const catOverlay = catText === '#000' ? 'rgba(0,0,0,.15)' : 'rgba(255,255,255,.2)'
                 return (
                   <div key={cat.id} className="rounded-2xl p-3 transition-all"
                     style={selected
@@ -714,12 +733,12 @@ export default function AdminTarjetasPage() {
                       : { backgroundColor: S.card, border: `1px solid ${S.border}` }}>
                     <button onClick={() => setCategoryFilter(cat.id)} className="w-full flex items-center gap-2 text-left mb-2">
                       <RewardIcon name={cat.icon} size={16} />
-                      <span className="text-sm font-bold flex-1 truncate" style={{ color: selected ? '#000' : S.text }}>{cat.name}</span>
+                      <span className="text-sm font-bold flex-1 truncate" style={{ color: selected ? catText : S.text }}>{cat.name}</span>
                     </button>
                     <div className="flex items-center gap-1.5 mb-2">
                       <span className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ backgroundColor: activeCount > 0 ? '#4ade80' : (selected ? 'rgba(0,0,0,.35)' : S.sub) }} />
-                      <span className="text-xs" style={{ color: selected ? 'rgba(0,0,0,.65)' : S.sub }}>
+                        style={{ backgroundColor: activeCount > 0 ? '#4ade80' : (selected ? catTextSoft : S.sub) }} />
+                      <span className="text-xs" style={{ color: selected ? catTextSoft : S.sub }}>
                         {activeCount > 0 ? `${activeCount} activa${activeCount !== 1 ? 's' : ''}` : 'Sin tarjetas activas'}
                       </span>
                     </div>
@@ -727,7 +746,7 @@ export default function AdminTarjetasPage() {
                       <button onClick={() => { setCatsOpen(true); selectCategory(cat) }}
                         className="flex-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-all"
                         style={selected
-                          ? { backgroundColor: 'rgba(0,0,0,.15)', color: '#000' }
+                          ? { backgroundColor: catOverlay, color: catText }
                           : { backgroundColor: S.bg, color: S.sub, border: `1px solid ${S.border}` }}>
                         Formulario
                       </button>
@@ -735,8 +754,8 @@ export default function AdminTarjetasPage() {
                         <a href={CARD_URLS[cat.id]} target="_blank" rel="noopener noreferrer"
                           className="flex-1 px-2 py-1.5 rounded-lg text-xs font-bold text-center transition-all"
                           style={selected
-                            ? { backgroundColor: 'rgba(0,0,0,.15)', color: '#000' }
-                            : { backgroundColor: S.bg, color: S.accent, border: `1px solid ${S.accent}` }}>
+                            ? { backgroundColor: catOverlay, color: catText }
+                            : { backgroundColor: `${S.accent}15`, color: S.text, border: `1px solid ${S.accent}` }}>
                           Tarjeta ↗
                         </a>
                       )}
@@ -754,7 +773,7 @@ export default function AdminTarjetasPage() {
             <button key={f} onClick={() => setFilter(f)}
               className="px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all"
               style={filter === f
-                ? { backgroundColor: S.accent, color: '#000' }
+                ? { backgroundColor: S.accent, color: contrastText(accentHex) }
                 : { backgroundColor: S.card, color: S.sub, border: `1px solid ${S.border}` }}>
               {f}
             </button>
@@ -780,7 +799,7 @@ export default function AdminTarjetasPage() {
 
                   {/* Avatar */}
                   <div className="w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shrink-0"
-                    style={{ backgroundColor: card.active ? `${S.accent}22` : 'rgba(239,68,68,.15)', color: card.active ? S.accent : '#f87171' }}>
+                    style={{ backgroundColor: card.active ? `${S.accent}22` : 'rgba(239,68,68,.15)', color: card.active ? S.text : '#f87171' }}>
                     {card.name.charAt(0).toUpperCase()}
                   </div>
 
@@ -828,7 +847,7 @@ export default function AdminTarjetasPage() {
                       className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
                       style={card.active
                         ? { backgroundColor: 'rgba(239,68,68,.12)', color: '#f87171' }
-                        : { backgroundColor: `${S.accent}20`, color: S.accent }}>
+                        : { backgroundColor: `${S.accent}20`, color: S.text }}>
                       {card.active ? 'Desactivar' : 'Activar'}
                     </button>
                     <button onClick={() => deleteCard(card.id)}

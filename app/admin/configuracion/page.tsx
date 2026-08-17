@@ -7,6 +7,7 @@ import AdminNav from '@/app/components/AdminNav'
 import { Icon } from '@/app/components/Icon'
 import { uploadWebp } from '@/lib/uploadWebp'
 import { BrandLogo } from '@/app/components/BrandLogo'
+import { useBrand } from '@/app/components/BrandProvider'
 
 const S = {
   bg: 'var(--ad-bg)', card: 'var(--ad-card)', accent: 'var(--ad-accent)',
@@ -48,7 +49,18 @@ function currentAdminName(): string {
 }
 
 export default function AdminConfiguracionPage() {
-  const [values, setValues]       = useState<Record<string, string>>({})
+  // Nombre/logo/colores ya disponibles sin fetch (layout → BrandProvider) —
+  // se usan como semilla inicial para no mostrar el placeholder ni el logo/
+  // color anteriores mientras el fetch de abajo (los 14 campos de esta
+  // página, uno por uno) todavía no resuelve.
+  const brand = useBrand()
+  const [values, setValues]       = useState<Record<string, string>>(() => ({
+    restaurant_name: brand.name || '',
+    menu_logo: brand.logo || '',
+    menu_logo_color: brand.logoColor || '',
+    menu_bg_color: brand.logoBg || '',
+    menu_hover_color: brand.accent || '',
+  }))
   const [saving, setSaving]       = useState<string | null>(null)
   const [saved,  setSaved]        = useState<string | null>(null)
   const [uploadingMenuLogo, setUploadingMenuLogo] = useState(false)
@@ -215,7 +227,7 @@ export default function AdminConfiguracionPage() {
               <div className="flex gap-2">
                 <input type="text" value={values.restaurant_name ?? ''}
                   onChange={e => setValues(p => ({ ...p, restaurant_name: e.target.value }))}
-                  placeholder="NICHO"
+                  placeholder="Mi Restaurante"
                   className="flex-1 px-4 py-3 rounded-2xl text-sm outline-none"
                   style={{ backgroundColor: S.bg, color: S.text, border: `1px solid ${S.border}` }} />
                 {renderSaveBtn('restaurant_name')}

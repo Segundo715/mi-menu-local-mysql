@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import AdminNav from '@/app/components/AdminNav'
 import { Icon } from '@/app/components/Icon'
 import { uploadWebp, fmtBytes } from '@/lib/uploadWebp'
+import { useBrand } from '@/app/components/BrandProvider'
 
 const S = {
   bg: 'var(--ad-bg)', card: 'var(--ad-card)', accent: 'var(--ad-accent)',
@@ -31,6 +32,10 @@ interface MenuItem {
 const EMPTY = { name: '', description: '', price: '', category: 'Platillos', imageUrl: '', available: true }
 
 export default function AdminMenuPage() {
+  // Logo/colores ya disponibles sin fetch (layout → BrandProvider) — se usan
+  // como semilla inicial para no mostrar el logo/color anteriores en el
+  // panel de Personalización mientras su propio fetch todavía no resuelve.
+  const brand = useBrand()
   const [items, setItems] = useState<MenuItem[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -42,9 +47,9 @@ export default function AdminMenuPage() {
   const [imgSize, setImgSize] = useState<{ original: number; webp: number } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const [menuLogo, setMenuLogo] = useState('')
-  const [menuHover, setMenuHover] = useState('#B90F45')
-  const [menuBg, setMenuBg] = useState('#000000')
+  const [menuLogo, setMenuLogo] = useState(() => brand.logo || '')
+  const [menuHover, setMenuHover] = useState(() => brand.accent || '#B90F45')
+  const [menuBg, setMenuBg] = useState(() => brand.logoBg || '#000000')
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [savedKey, setSavedKey] = useState<string | null>(null)
   const [uploadingMenuLogo, setUploadingMenuLogo] = useState(false)
