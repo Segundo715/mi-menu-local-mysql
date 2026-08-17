@@ -13,6 +13,17 @@ const S = {
   text: 'var(--ad-text)', sub: 'var(--ad-sub)', border: 'var(--ad-border)',
 }
 
+// Texto negro o blanco según la luminancia del acento, para que los botones
+// con fondo de acento nunca queden con texto invisible (ej. acento blanco o negro).
+function contrastText(hex: string): string {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex)
+  if (!m) return '#000'
+  const n = parseInt(m[1], 16)
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return lum > 0.6 ? '#000' : '#fff'
+}
+
 const TEXT_SETTINGS = [
   { key: 'registro_titulo',    label: 'Título de bienvenida',    placeholder: '¡Bienvenido!',                       hint: 'Aparece en la tarjeta de /registro' },
   { key: 'registro_subtitulo', label: 'Subtítulo de bienvenida', placeholder: 'Completa tus datos para registrarte...', hint: 'Texto debajo del título en /registro' },
@@ -41,6 +52,10 @@ export default function AdminConfiguracionPage() {
   const [saving, setSaving]       = useState<string | null>(null)
   const [saved,  setSaved]        = useState<string | null>(null)
   const [uploadingMenuLogo, setUploadingMenuLogo] = useState(false)
+
+  // Hex real detrás de --ad-accent (menu_hover_color) — se usa para calcular
+  // texto legible en los botones de acento en vez de asumir que siempre es oscuro.
+  const accentHex = /^#[0-9a-fA-F]{6}$/.test(values.menu_hover_color ?? '') ? values.menu_hover_color : '#B90F45'
 
   // Perfiles
   const [admins, setAdmins]         = useState<AdminItem[]>([])
@@ -156,7 +171,7 @@ export default function AdminConfiguracionPage() {
       onClick={() => saveSetting(k)}
       disabled={saving === k}
       className="px-4 py-2 rounded-2xl text-sm font-bold shrink-0 transition-all"
-      style={{ backgroundColor: saved === k ? 'rgba(0,230,118,.2)' : `${S.accent}22`, color: saved === k ? '#4ade80' : S.accent }}>
+      style={{ backgroundColor: saved === k ? 'rgba(0,230,118,.2)' : `${S.accent}22`, color: saved === k ? '#4ade80' : contrastText(accentHex) }}>
       {saving === k ? '...' : saved === k ? <span className="inline-flex items-center gap-1.5"><Icon name="check" size={14} /> Guardado</span> : 'Guardar'}
     </button>
   )
@@ -217,7 +232,7 @@ export default function AdminConfiguracionPage() {
                     alt="logo menú" className="w-10 h-10 object-contain" />
                 </div>
                 <label className="px-4 py-2 rounded-2xl text-sm font-bold cursor-pointer transition-all"
-                  style={{ backgroundColor: `${S.accent}22`, color: S.accent }}>
+                  style={{ backgroundColor: `${S.accent}22`, color: contrastText(accentHex) }}>
                   {uploadingMenuLogo ? 'Subiendo...' : 'Cambiar logo'}
                   <input type="file" accept="image/*" className="hidden"
                     onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogo(f, 'menu_logo', setUploadingMenuLogo) }} />
@@ -264,9 +279,9 @@ export default function AdminConfiguracionPage() {
               {renderColorRow('menu_hover_color', values.menu_hover_color || '#DC5E86')}
               <div className="mt-2 flex gap-2">
                 <span className="inline-flex items-center px-3.5 py-2 rounded-lg text-sm font-medium"
-                  style={{ backgroundColor: values.menu_btn_color || '#B90F45', color: '#fff' }}>Botón</span>
+                  style={{ backgroundColor: values.menu_btn_color || '#B90F45', color: contrastText(values.menu_btn_color || '#B90F45') }}>Botón</span>
                 <span className="inline-flex items-center px-3.5 py-2 rounded-lg text-sm font-medium"
-                  style={{ backgroundColor: values.menu_hover_color || '#DC5E86', color: '#fff' }}>Acento</span>
+                  style={{ backgroundColor: values.menu_hover_color || '#DC5E86', color: contrastText(accentHex) }}>Acento</span>
               </div>
             </div>
 
@@ -341,7 +356,7 @@ export default function AdminConfiguracionPage() {
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: `${S.accent}22`, color: S.accent }}>
+                          style={{ backgroundColor: `${S.accent}22`, color: contrastText(accentHex) }}>
                           {a.role || 'Administrador'}
                         </span>
                         <span className="text-xs" style={{ color: S.sub }}>Alta: {new Date(a.createdAt).toLocaleDateString()}</span>
@@ -387,12 +402,12 @@ export default function AdminConfiguracionPage() {
                   </code>
                   <button onClick={copyPassword}
                     className="px-3 py-2.5 rounded-xl text-xs font-bold shrink-0 transition-all"
-                    style={{ backgroundColor: passCopied ? 'rgba(74,222,128,.2)' : `${S.accent}22`, color: passCopied ? '#4ade80' : S.accent }}>
+                    style={{ backgroundColor: passCopied ? 'rgba(74,222,128,.2)' : `${S.accent}22`, color: passCopied ? '#4ade80' : contrastText(accentHex) }}>
                     {passCopied ? '✓ Copiada' : 'Copiar'}
                   </button>
                   <button onClick={() => { setNewPass(generatePassword()); setPassCopied(false) }}
                     className="px-3 py-2.5 rounded-xl text-xs font-bold shrink-0 transition-all"
-                    style={{ backgroundColor: `${S.accent}22`, color: S.accent }}>
+                    style={{ backgroundColor: `${S.accent}22`, color: contrastText(accentHex) }}>
                     Nueva
                   </button>
                 </div>
@@ -400,7 +415,7 @@ export default function AdminConfiguracionPage() {
 
               <button onClick={createProfile} disabled={creating || !newName.trim() || !newPass}
                 className="w-full py-3 rounded-2xl text-sm font-bold transition-all disabled:opacity-50"
-                style={{ backgroundColor: S.accent, color: '#000' }}>
+                style={{ backgroundColor: S.accent, color: contrastText(accentHex) }}>
                 {creating ? 'Creando...' : '+ Crear perfil'}
               </button>
 

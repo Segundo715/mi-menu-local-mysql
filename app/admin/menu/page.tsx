@@ -12,6 +12,17 @@ const S = {
 
 const CATEGORIES = ['Platillos', 'Bebidas', 'Postres', 'Ensaladas', 'Entradas', 'Especiales']
 
+// Texto negro o blanco según la luminancia del acento, para que los botones
+// con fondo de acento nunca queden con texto invisible (ej. acento blanco o negro).
+function contrastText(hex: string): string {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex)
+  if (!m) return '#000'
+  const n = parseInt(m[1], 16)
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return lum > 0.6 ? '#000' : '#fff'
+}
+
 interface MenuItem {
   id: string; name: string; description: string; price: number
   category: string; imageUrl?: string; available: boolean; likes: number
@@ -45,6 +56,10 @@ export default function AdminMenuPage() {
   const [savedCarousel, setSavedCarousel] = useState(false)
   const [carouselError, setCarouselError] = useState('')
   const carouselFileRef = useRef<HTMLInputElement>(null)
+
+  // Hex real detrás de --ad-accent (menuHover) — se usa para calcular texto
+  // legible en los botones de acento en vez de asumir que siempre es oscuro.
+  const accentHex = /^#[0-9a-fA-F]{6}$/.test(menuHover) ? menuHover : '#B90F45'
 
   async function load() {
     const r = await fetch('/api/menu')
@@ -128,7 +143,7 @@ export default function AdminMenuPage() {
           style={{ backgroundColor: S.bg, color: S.text, border: `1px solid ${S.border}` }} />
         <button onClick={() => saveColor(key, value)} disabled={savingKey === key}
           className="px-4 py-2 rounded-2xl text-sm font-bold shrink-0"
-          style={{ backgroundColor: savedKey === key ? 'rgba(0,230,118,.2)' : `${S.accent}22`, color: savedKey === key ? '#4ade80' : S.accent }}>
+          style={{ backgroundColor: savedKey === key ? 'rgba(0,230,118,.2)' : `${S.accent}22`, color: savedKey === key ? '#4ade80' : contrastText(accentHex) }}>
           {savingKey === key ? '...' : savedKey === key ? <Icon name="check" size={15} /> : 'Guardar'}
         </button>
       </div>
@@ -197,7 +212,7 @@ export default function AdminMenuPage() {
             </button>
             <button onClick={openNew}
               className="text-sm px-4 py-2 rounded-xl font-bold"
-              style={{ backgroundColor: S.accent, color: '#000' }}>
+              style={{ backgroundColor: S.accent, color: contrastText(accentHex) }}>
               + Nuevo platillo
             </button>
           </div>
@@ -278,7 +293,7 @@ export default function AdminMenuPage() {
                         <div className="flex gap-2">
                           <button onClick={() => openEdit(p)}
                             className="px-3 py-1 rounded-lg text-xs font-bold"
-                            style={{ backgroundColor: `${S.accent}20`, color: S.accent }}>Editar</button>
+                            style={{ backgroundColor: `${S.accent}20`, color: contrastText(accentHex) }}>Editar</button>
                           <button onClick={() => remove(p.id)}
                             className="px-3 py-1 rounded-lg text-xs font-bold"
                             style={{ backgroundColor: 'rgba(239,68,68,.12)', color: '#f87171' }}>Eliminar</button>
@@ -367,7 +382,7 @@ export default function AdminMenuPage() {
             </label>
             <button onClick={save} disabled={saving || !form.name.trim() || !form.price}
               className="w-full py-4 rounded-2xl font-black text-base disabled:opacity-50"
-              style={{ backgroundColor: S.accent, color: '#000' }}>
+              style={{ backgroundColor: S.accent, color: contrastText(accentHex) }}>
               {saving ? 'Guardando...' : editing ? 'Guardar cambios' : 'Crear platillo'}
             </button>
           </div>
@@ -409,7 +424,7 @@ export default function AdminMenuPage() {
               <div className="rounded-2xl p-4" style={{ backgroundColor: menuBg, border: `1px solid ${S.border}` }}>
                 <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: S.sub }}>Vista previa</p>
                 <div className="space-y-1.5">
-                  <div className="rounded-lg px-3 py-2 text-sm font-bold" style={{ backgroundColor: menuHover, color: '#000' }}>Botón activo</div>
+                  <div className="rounded-lg px-3 py-2 text-sm font-bold" style={{ backgroundColor: menuHover, color: contrastText(accentHex) }}>Botón activo</div>
                 </div>
               </div>
             </div>
@@ -429,7 +444,7 @@ export default function AdminMenuPage() {
                   </button>
                   <button onClick={saveCarousel} disabled={savingCarousel}
                     className="text-sm px-4 py-2 rounded-xl font-bold"
-                    style={{ backgroundColor: savedCarousel ? 'rgba(0,230,118,.2)' : S.accent, color: savedCarousel ? '#4ade80' : '#000' }}>
+                    style={{ backgroundColor: savedCarousel ? 'rgba(0,230,118,.2)' : S.accent, color: savedCarousel ? '#4ade80' : contrastText(accentHex) }}>
                     {savingCarousel ? '...' : savedCarousel ? <span className="inline-flex items-center justify-center gap-1.5"><Icon name="check" size={14} /> Guardado</span> : 'Guardar carrusel'}
                   </button>
                 </div>
