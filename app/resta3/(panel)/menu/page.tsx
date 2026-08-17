@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Resta3Nav from '@/app/components/Resta3Nav'
 import { Icon } from '@/app/components/Icon'
+import { useBrand } from '@/app/components/BrandProvider'
 
 interface MenuItem {
   id: string; name: string; description: string; price: number
@@ -18,6 +19,17 @@ const S = {
   text: 'var(--ad-text)', sub: 'var(--ad-sub)', border: 'var(--ad-border)', input: 'var(--ad-elevated)',
 }
 const INPUT_CLS = 'w-full rounded-xl px-3 py-2 text-sm focus:outline-none transition-colors'
+
+// Texto negro o blanco según la luminancia del acento, para que ningún texto
+// ni fondo con el color de acento quede invisible (acento muy claro u oscuro).
+function contrastText(hex: string): string {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex)
+  if (!m) return '#000'
+  const n = parseInt(m[1], 16)
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return lum > 0.6 ? '#000' : '#fff'
+}
 
 async function uploadImage(file: File): Promise<string | null> {
   const fd = new FormData()
@@ -40,7 +52,7 @@ function ImagePicker({ value, onChange }: { value: string; onChange: (url: strin
       <input type="file" accept="image/*" onChange={handleFile}
         className={INPUT_CLS + ' file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold'}
         style={{ backgroundColor: S.input, color: S.text, border: `1px solid ${S.border}` }} />
-      {uploading && <p className="text-xs mt-1" style={{ color: S.accent }}>Subiendo imagen...</p>}
+      {uploading && <p className="text-xs mt-1" style={{ color: S.text }}>Subiendo imagen...</p>}
       {value && (
         <div className="mt-2 flex items-center gap-2">
           <img src={value} alt="preview" className="h-16 rounded-xl object-cover" />
@@ -52,6 +64,10 @@ function ImagePicker({ value, onChange }: { value: string; onChange: (url: strin
 }
 
 export default function Resta3MenuPage() {
+  // Hex real detrás de --ad-accent — para calcular texto legible en vez de
+  // asumir que el acento siempre es oscuro.
+  const brandAccent = useBrand().accent
+  const accentHex = /^#[0-9a-fA-F]{6}$/.test(brandAccent) ? brandAccent : '#B90F45'
   const [items, setItems] = useState<MenuItem[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -121,7 +137,7 @@ export default function Resta3MenuPage() {
 
         {/* Formulario añadir */}
         <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: S.card, border: `1px solid ${S.border}` }}>
-          <h2 className="font-bold text-lg" style={{ color: S.accent }}>Añadir producto</h2>
+          <h2 className="font-bold text-lg" style={{ color: S.text }}>Añadir producto</h2>
           {formError && (
             <div className="border rounded-xl px-4 py-3 text-sm"
               style={{ backgroundColor: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.4)', color: '#fca5a5' }}>
@@ -162,14 +178,14 @@ export default function Resta3MenuPage() {
           </div>
           <button onClick={createItem} disabled={saving}
             className="w-full font-bold py-3 rounded-xl disabled:opacity-60 transition-colors"
-            style={{ backgroundColor: S.accent, color: '#000' }}>
+            style={{ backgroundColor: S.accent, color: contrastText(accentHex) }}>
             {saving ? 'Guardando...' : '+ Añadir producto'}
           </button>
         </div>
 
         {/* Lista por categoría */}
         {loading ? (
-          <div className="text-center py-10" style={{ color: S.accent }}>Cargando...</div>
+          <div className="text-center py-10" style={{ color: S.text }}>Cargando...</div>
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center py-10" style={{ color: S.sub }}>
             <span className="mb-2"><Icon name="utensils" size={34} /></span>
@@ -178,7 +194,7 @@ export default function Resta3MenuPage() {
         ) : (
           Object.entries(grouped).map(([category, catItems]) => (
             <div key={category} className="space-y-3">
-              <h2 className="font-bold text-lg pb-1" style={{ color: S.accent, borderBottom: `1px solid ${S.border}` }}>{category}</h2>
+              <h2 className="font-bold text-lg pb-1" style={{ color: S.text, borderBottom: `1px solid ${S.border}` }}>{category}</h2>
               {catItems.map(item => (
                 <div key={item.id} className="rounded-2xl p-4" style={{ backgroundColor: S.card, border: `1px solid ${S.border}` }}>
                   {editingId === item.id ? (
@@ -208,7 +224,7 @@ export default function Resta3MenuPage() {
                       <div className="flex gap-2">
                         <button onClick={() => saveEdit(item.id)} disabled={saving}
                           className="flex-1 font-bold py-2 rounded-xl text-sm disabled:opacity-60"
-                          style={{ backgroundColor: S.accent, color: '#000' }}>
+                          style={{ backgroundColor: S.accent, color: contrastText(accentHex) }}>
                           {saving ? 'Guardando...' : 'Guardar'}
                         </button>
                         <button onClick={() => setEditingId(null)}
@@ -225,9 +241,9 @@ export default function Resta3MenuPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-bold" style={{ color: S.text }}>{item.name}</h3>
-                            <span className="text-sm font-bold" style={{ color: S.accent }}>${item.price.toFixed(2)}</span>
+                            <span className="text-sm font-bold" style={{ color: S.text }}>${item.price.toFixed(2)}</span>
                             {item.available
-                              ? <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'color-mix(in srgb, var(--ad-accent) 15%, transparent)', color: 'var(--ad-accent)' }}>Disponible</span>
+                              ? <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'color-mix(in srgb, var(--ad-accent) 15%, transparent)', color: S.text }}>Disponible</span>
                               : <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgba(239,68,68,0.15)', color: '#f87171' }}>No disponible</span>}
                           </div>
                           {item.description && <p className="text-sm mt-0.5 line-clamp-2" style={{ color: S.sub }}>{item.description}</p>}
@@ -236,7 +252,7 @@ export default function Resta3MenuPage() {
                       <div className="flex gap-2 mt-3">
                         <button onClick={() => toggleAvailable(item)}
                           className="flex-1 py-1.5 rounded-xl text-sm font-medium"
-                          style={{ border: item.available ? '1px solid rgba(251,146,60,0.4)' : `1px solid color-mix(in srgb, var(--ad-accent) 40%, transparent)`, color: item.available ? '#fb923c' : 'var(--ad-accent)', backgroundColor: 'transparent' }}>
+                          style={{ border: item.available ? '1px solid rgba(251,146,60,0.4)' : `1px solid color-mix(in srgb, var(--ad-accent) 40%, transparent)`, color: item.available ? '#fb923c' : S.text, backgroundColor: 'transparent' }}>
                           {item.available ? 'Desactivar' : 'Activar'}
                         </button>
                         <button onClick={() => startEdit(item)}

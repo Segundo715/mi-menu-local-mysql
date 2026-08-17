@@ -326,7 +326,7 @@ export default function AdminSellarPage() {
               <div>
                 <p className="font-bold text-lg" style={{ color: S.text }}>{card.name}</p>
                 <p className="text-sm" style={{ color: S.sub }}>{card.phone}</p>
-                <p className="text-xs mt-0.5 font-semibold" style={{ color: S.accent }}>
+                <p className="text-xs mt-0.5 font-semibold" style={{ color: S.text }}>
                   {CARD_TYPE_LABELS[card.cardType] ?? card.cardType}
                 </p>
               </div>
@@ -435,7 +435,7 @@ export default function AdminSellarPage() {
 
           {/* QR del negocio */}
           <div className="rounded-2xl p-5 text-center" style={{ backgroundColor: S.card, border: `1px solid ${S.border}` }}>
-            <h2 className="font-bold text-base mb-1" style={{ color: S.accent }}>QR del negocio</h2>
+            <h2 className="font-bold text-base mb-1" style={{ color: S.text }}>QR del negocio</h2>
             <p className="text-xs mb-4" style={{ color: S.sub }}>Muéstralo para que los clientes se registren</p>
             <div className="flex justify-center mb-3">
               <div className="p-3 rounded-xl bg-white inline-block min-h-[172px] min-w-[172px] flex items-center justify-center">
@@ -447,7 +447,7 @@ export default function AdminSellarPage() {
 
           {/* Sellar visita */}
           <div className="rounded-2xl p-5" style={{ backgroundColor: S.card, border: `1px solid ${S.border}` }}>
-            <h2 className="font-bold text-base mb-3" style={{ color: S.accent }}>Sellar visita del cliente</h2>
+            <h2 className="font-bold text-base mb-3" style={{ color: S.text }}>Sellar visita del cliente</h2>
 
             {scanError && (
               <div className="rounded-xl px-4 py-3 text-sm mb-3"
@@ -482,7 +482,7 @@ export default function AdminSellarPage() {
             {scanMode === 'phone' && scanState === 'idle' && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-semibold mb-1" style={{ color: S.accent }}>Número de teléfono del cliente</label>
+                  <label className="block text-sm font-semibold mb-1" style={{ color: S.text }}>Número de teléfono del cliente</label>
                   <input type="tel" value={phoneSearch}
                     onChange={e => setPhoneSearch(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && searchByPhone()}
@@ -562,7 +562,7 @@ export default function AdminSellarPage() {
                       <p className="text-xs mt-0.5" style={{ color: S.sub }}>Registrado: {fmt(c.registeredAt)}</p>
                     </div>
                     <span className="text-xs font-semibold px-2 py-1 rounded-full"
-                      style={{ backgroundColor: `${S.accent}20`, color: S.accent }}>
+                      style={{ backgroundColor: `${S.accent}20`, color: S.text }}>
                       {c.visits}/5 sellos
                     </span>
                   </div>
@@ -642,10 +642,10 @@ export default function AdminSellarPage() {
           {/* Clientes activos */}
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-lg" style={{ color: S.text }}>Activos ({confirmed.length})</h2>
-            <button onClick={loadCustomers} className="text-sm underline" style={{ color: S.accent }}>Actualizar</button>
+            <button onClick={loadCustomers} className="text-sm underline" style={{ color: S.text }}>Actualizar</button>
           </div>
 
-          {loadingList && <div className="text-center py-10" style={{ color: S.accent }}>Cargando...</div>}
+          {loadingList && <div className="text-center py-10" style={{ color: S.text }}>Cargando...</div>}
 
           {!loadingList && confirmed.length === 0 && (
             <div className="flex flex-col items-center py-10" style={{ color: S.sub }}>
@@ -666,7 +666,7 @@ export default function AdminSellarPage() {
                   <span className="px-2 py-1 rounded-full text-xs font-bold"
                     style={c.visits >= 5
                       ? { backgroundColor: 'rgba(74,222,128,.12)', color: '#4ade80' }
-                      : { backgroundColor: `${S.accent}20`, color: S.accent }}>
+                      : { backgroundColor: `${S.accent}20`, color: S.text }}>
                     {c.visits >= 5
                       ? <span className="inline-flex items-center gap-1"><Icon name="gift" size={11} /> Premio</span>
                       : <span className="inline-flex items-center gap-1">{c.visits}/5 <Icon name="coffee" size={11} /></span>}

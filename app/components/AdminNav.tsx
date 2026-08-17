@@ -228,11 +228,9 @@ export default function AdminNav() {
   const S = {
     sidebar:   { backgroundColor: 'var(--ad-sidebar)', borderRight: '1px solid var(--ad-border)' },
     card:      { backgroundColor: 'var(--ad-card)', border: '1px solid var(--ad-border)' },
-    navActive: { backgroundColor: 'var(--ad-accent)', color: '#000' },
     navHover:  { backgroundColor: 'var(--ad-overlay)' },
     text:      { color: 'var(--ad-text)' },
     sub:       { color: 'var(--ad-sub)' },
-    accent:    { color: 'var(--ad-accent)' },
     border:    { borderColor: 'var(--ad-border)' },
   }
 

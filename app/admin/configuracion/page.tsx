@@ -364,7 +364,7 @@ export default function AdminConfiguracionPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold truncate" style={{ color: S.text }}>
-                        {a.name}{isMe && <span className="ml-2 text-xs font-medium" style={{ color: S.accent }}>(tú)</span>}
+                        {a.name}{isMe && <span className="ml-2 text-xs font-medium" style={{ color: S.text }}>(tú)</span>}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"

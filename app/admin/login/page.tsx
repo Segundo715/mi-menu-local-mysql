@@ -6,6 +6,17 @@ import { useBrand } from '@/app/components/BrandProvider'
 
 const STORAGE_KEY = 'admin_remembered_name'
 
+// Texto negro o blanco según la luminancia del acento, para que el botón
+// "Entrar" nunca quede con texto invisible (acento muy claro u oscuro).
+function contrastText(hex: string): string {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex)
+  if (!m) return '#000'
+  const n = parseInt(m[1], 16)
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return lum > 0.6 ? '#000' : '#fff'
+}
+
 export default function LoginPage() {
   const [name, setName]         = useState('')
   const [password, setPassword] = useState('')
@@ -14,9 +25,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   // Nombre/logo/colores vienen del servidor (layout → BrandProvider) — sin
   // fetch propio no hay parpadeo de la marca anterior al recargar la página.
-  const { name: brandNameRaw, logo: brandLogo, logoColor, logoBg } = useBrand()
+  const { name: brandNameRaw, logo: brandLogo, logoColor, logoBg, accent } = useBrand()
   const logo = brandLogo || '/logo.png'
   const brandName = brandNameRaw || 'Restaurante'
+  const accentHex = /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : '#B90F45'
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
@@ -56,13 +68,13 @@ export default function LoginPage() {
           <BrandLogo src={logo} color={logoColor} alt="Logo" className="w-full h-full object-contain" />
         </div>
         <div className="font-extrabold text-xl tracking-wide" style={{ color: 'var(--ad-text)' }}>{brandName}</div>
-        <p className="text-sm mt-1 font-medium" style={{ color: 'var(--ad-accent)' }}>Panel de administración</p>
+        <p className="text-sm mt-1 font-medium" style={{ color: 'var(--ad-text)' }}>Panel de administración</p>
       </div>
 
       <div className="w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden"
         style={{ backgroundColor: 'var(--ad-card)', border: '1px solid var(--ad-border)' }}>
 
-        <p className="text-sm font-black text-center pt-4 pb-1" style={{ color: 'var(--ad-accent)' }}>Iniciar sesión</p>
+        <p className="text-sm font-black text-center pt-4 pb-1" style={{ color: 'var(--ad-text)' }}>Iniciar sesión</p>
 
         <form onSubmit={handleSubmit} className="px-5 pb-5 space-y-3">
           <div>
@@ -112,7 +124,7 @@ export default function LoginPage() {
 
           <button type="submit" disabled={loading}
             className="w-full font-black py-4 rounded-2xl text-base disabled:opacity-60 transition-colors mt-1"
-            style={{ backgroundColor: 'var(--ad-accent)', color: '#000' }}>
+            style={{ backgroundColor: 'var(--ad-accent)', color: contrastText(accentHex) }}>
             {loading ? 'Cargando...' : '→ Entrar'}
           </button>
         </form>

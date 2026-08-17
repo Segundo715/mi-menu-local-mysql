@@ -5,6 +5,18 @@
 import { useState, useEffect, useRef } from 'react'
 import AdminNav from '@/app/components/AdminNav'
 import { Icon } from '@/app/components/Icon'
+import { useBrand } from '@/app/components/BrandProvider'
+
+// Texto negro o blanco según la luminancia del acento, para que ningún texto
+// ni fondo con el color de acento quede invisible (acento muy claro u oscuro).
+function contrastText(hex: string): string {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex)
+  if (!m) return '#000'
+  const n = parseInt(m[1], 16)
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return lum > 0.6 ? '#000' : '#fff'
+}
 
 interface OrderItem { name: string; quantity: number; price: number }
 interface Order {
@@ -81,6 +93,10 @@ function playNotificationSound() {
 }
 
 export default function OrdersPage() {
+  // Hex real detrás de --ad-accent — para calcular texto legible en vez de
+  // asumir que el acento siempre es oscuro.
+  const brandAccent = useBrand().accent
+  const accentHex = /^#[0-9a-fA-F]{6}$/.test(brandAccent) ? brandAccent : '#B90F45'
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'active' | 'chart'>('active')
@@ -143,7 +159,7 @@ export default function OrdersPage() {
               className="px-5 py-3.5 text-sm font-bold border-b-2 transition-colors"
               style={{
                 borderColor: tab === t ? S.accent : 'transparent',
-                color: tab === t ? S.accent : S.sub,
+                color: tab === t ? S.text : S.sub,
               }}>
               {t === 'active'
                 ? <>Pedidos activos {active.length > 0 && (
@@ -243,7 +259,7 @@ export default function OrdersPage() {
                       {order.items.map((item, i) => (
                         <div key={i} className="flex justify-between text-sm">
                           <span style={{ color: S.text }}>
-                            <span className="font-black" style={{ color: S.accent }}>{item.quantity}×</span> {item.name}
+                            <span className="font-black" style={{ color: S.text }}>{item.quantity}×</span> {item.name}
                           </span>
                           <span style={{ color: S.sub }}>${(item.price * item.quantity).toFixed(2)}</span>
                         </div>
@@ -324,14 +340,14 @@ export default function OrdersPage() {
                     <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0"
                       style={{
                         backgroundColor: idx === 0 ? S.accent : idx === 1 ? 'rgba(0,230,118,0.4)' : 'rgba(255,255,255,0.08)',
-                        color: idx <= 1 ? '#000' : S.sub,
+                        color: idx === 0 ? contrastText(accentHex) : idx === 1 ? '#000' : S.sub,
                       }}>
                       {idx + 1}
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between text-sm mb-1.5">
                         <span className="font-semibold truncate" style={{ color: S.text }}>{name}</span>
-                        <span className="font-black ml-2 shrink-0" style={{ color: S.accent }}>{count}</span>
+                        <span className="font-black ml-2 shrink-0" style={{ color: S.text }}>{count}</span>
                       </div>
                       <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
                         <div
